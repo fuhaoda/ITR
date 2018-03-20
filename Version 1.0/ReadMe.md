@@ -15,7 +15,7 @@ ThreeDepthSearch.cpp
 ThreeDepthSearch.h	  
 main.cpp   
 
-### Structure
+### Structure:
 * main.cpp 
 * DataGeneration.h
 * DataInfo.h	
