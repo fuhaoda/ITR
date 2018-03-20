@@ -14,3 +14,12 @@ Res.h
 ThreeDepthSearch.cpp	  
 ThreeDepthSearch.h	  
 main.cpp   
+
+### Structure
+* main.cpp 
+* DataGeneration.h
+* DataInfo.h	
+* Res.h   
+* ITR.h	 
+  * ThreeDepthSearch.h	  
+  * FlexDepthSearch.h	 
