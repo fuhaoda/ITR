@@ -23,3 +23,6 @@ main.cpp
 * ITR.h	 
   * ThreeDepthSearch.h	  
   * FlexDepthSearch.h	 
+
+Please contact "Jie Xue" for more information.   
+Email: <xue_jie@lilly.com>
