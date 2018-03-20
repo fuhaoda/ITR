@@ -1,11 +1,11 @@
 ### Unit Test
 * Implement googletest for unit test (build-in in Visual Studio)
-* Apply python for [result validation](https://github.com/JieXue328/ITR-Develop/tree/master/Version%202.0/Python%20Verification)
+* Apply python for [result validation](../Python%20Verification)
 
 3 test datasets:  
-* [Simple test data](https://github.com/JieXue328/ITR-Develop/blob/master/Version%202.0/Python%20Verification/TestBuildInSimpleData.csv) (1 ord)
-* [CSV test data](https://github.com/JieXue328/ITR-Develop/blob/master/Version%202.0/Python%20Verification/TestSample_100_XTable.csv) (3 cont, 3 ord, 3 nom)
-* [Simulated test data](https://github.com/JieXue328/ITR-Develop/blob/master/Version%202.0/Test/CreateSimulationData.h) (2 cont, 3 ord, 4 nom)
+* [Simple test data](../Python%20Verification/TestBuildInSimpleData.csv) (1 ord)
+* [CSV test data](../Python%20Verification/TestSample_100_XTable.csv) (3 cont, 3 ord, 3 nom)
+* [Simulated test data](CreateSimulationData.h) (2 cont, 3 ord, 4 nom)
  
 [30 tests for 8 test cases](test.cpp):       
 1. [**DataInput**](LoadData.h)**Test**       
@@ -21,7 +21,7 @@
   3.1 **SimpleTestData**: validate "class CreateX" for simple test data     
   3.2 **CSVTestData**: validate "class CreateX" for CSV test data     
   3.3 **SimulationData**: validate "class CreateX" for simulated data    
-4. [**CreateLookUpTableTest**](../Python%20Verification/CreateLookUpTable.h)**Test**      
+4. [**CreateLookUpTableTest**](CreateLookUpTable.h)**Test**      
   4.1 **SimpleTestData_Part_I**: validate _DataInfo_ for "class CreateLookUpTable" with simple test data     
   4.2 **SimpleTestData_Part_II**: validate lookup table for "class CreateLookUpTable" with simple test data    
   4.3 **CSVData_Part_I**: validate _DataInfo_ for "class CreateLookUpTable" with CSV test data    
