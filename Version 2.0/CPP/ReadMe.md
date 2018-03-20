@@ -3,3 +3,7 @@ Developed based on version 1.0
 * Able to read CSV data
 * Implement Python for  verification
 * Add unit testing by using google test
+
+### List of files:  
+
+### Structure:
