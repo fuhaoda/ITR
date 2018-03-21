@@ -1,3 +1,4 @@
+Haoda new line here
 Check file list: dir
 Go to previous directory: cd -
 Go to given directory: cd [directory] or cd "[directory] "
