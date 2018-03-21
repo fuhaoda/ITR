@@ -45,7 +45,7 @@
 8. [**FlexDepthSearch**](FlexDepthSearch.h)**Test**        
   8.1 **CSVTestData_1D**: validate "class FlexDepthSearch" for depth 1 with CSV data   
   8.2 **CSVTestData_2D**: validate "class FlexDepthSearch" for depth 2 with CSV data   
-  8.2 **CSVTestData_3D**: validate "class FlexDepthSearch" for depth 3 with CSV data     
+  8.3 **CSVTestData_3D**: validate "class FlexDepthSearch" for depth 3 with CSV data     
   8.4 **SimulatedTestData_1D**: validate "class FlexDepthSearch" for depth 1 with simulated data   
   8.5 **SimulatedTestData_2D**: validate "class FlexDepthSearch" for depth 2 with simulated data     
   8.6 **SimulatedTestData_3D**: validate "class FlexDepthSearch" for depth 3 with simulated data   
