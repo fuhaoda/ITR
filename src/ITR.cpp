@@ -1,3 +1,41 @@
+#include <memory> 
+#include "ITR.h"
+#include "Data.h"
+#include "SearchEngine.h"
+
+#include <iostream> 
+
+std::unique_ptr<ITR::Data> data_;
+std::unique_ptr<ITR::SearchEngine> engine_; 
+
+namespace ITR {
+
+ITR::ITR(std::string input_file, unsigned search_depth) {
+  // Load the input
+  std::cout << "Load input data ...\n";
+  data_ = std::unique_ptr<Data>{nullptr};
+
+  std::cout << "Instantiate search engine ...\n";
+  engine_ = std::make_unique<SearchEngine>(search_depth); 
+}
+
+
+void ITR::run() {
+  std::cout << "Searching ...\n";
+  engine_->run(data_.get()); 
+} 
+
+
+void ITR::report() {
+  std::cout << "Report ...\n"; 
+}
+
+
+} // namespace ITR
+
+
+
+/*
 #include "pch.h"
 #include "ITR.h"
 
@@ -61,3 +99,4 @@ vector<DataInfo *> ITR::getDataInfo() {
 vector<Res *> ITR::getSearchResults() {
 	return ITR::searchResults;
 }
+*/

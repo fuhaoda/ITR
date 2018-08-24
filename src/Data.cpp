@@ -1,87 +1,105 @@
-#include "pch.h"
 #include "Data.h"
 
-Data::Data()
-{
-    //ctor
-}
 
-Data::~Data()
-{
-    //dtor
-}
+namespace ITR {
 
-const vector<unsigned int>& Data :: getID()
-{
-    return id;
-}
-
-const vector<vector<double>>& Data :: getY()
-{
-    return y;
-}
-
-const vector<vector<unsigned int>>& Data :: getActions()
-{
-    return actions;
-}
+Data::Data() {
+  // Load the input file
+  //
+  // Convert the continuous variables into integers in the range of [0, 9] based
+  // on the percentile values.  
+} 
 
 
-const vector<vector<double>>& Data :: getX_Cont()
-{
-    return x_Cont;
-}
 
-const vector<vector<unsigned int>>& Data :: getX_Ord()
-{
-    return x_Ord;
-}
+} // namespace ITR
 
-const vector<vector<unsigned int>>& Data :: getX_Nom()
-{
-    return x_Nom;
-}
 
-const vector<unsigned int>& Data::getX_Type()
-{
-    return dataType;
-}
 
-unsigned int Data::getSampleSize(){
-    return sampleSize;
-}
+// #include "pch.h"
+// #include "Data.h"
 
-void Data::printID()
-{
-    utility::print1DVector(id);
-}
+// Data::Data()
+// {
+//     //ctor
+// }
 
-void Data::printY()
-{
-    utility::print2DVector(y);
-}
+// Data::~Data()
+// {
+//     //dtor
+// }
 
-void Data::printActions()
-{
-    utility::print2DVector(actions);
-}
+// const vector<unsigned int>& Data :: getID()
+// {
+//     return id;
+// }
 
-void Data::printX_Cont()
-{
-    utility::print2DVector(x_Cont);
-}
+// const vector<vector<double>>& Data :: getY()
+// {
+//     return y;
+// }
 
-void Data::printX_Ord()
-{
-    utility::print2DVector(x_Ord);
-}
+// const vector<vector<unsigned int>>& Data :: getActions()
+// {
+//     return actions;
+// }
 
-void Data::printX_Nom()
-{
-    utility::print2DVector(x_Nom);
-}
 
-void Data::printX_Type()
-{
-    utility::print1DVector(dataType);
-}
+// const vector<vector<double>>& Data :: getX_Cont()
+// {
+//     return x_Cont;
+// }
+
+// const vector<vector<unsigned int>>& Data :: getX_Ord()
+// {
+//     return x_Ord;
+// }
+
+// const vector<vector<unsigned int>>& Data :: getX_Nom()
+// {
+//     return x_Nom;
+// }
+
+// const vector<unsigned int>& Data::getX_Type()
+// {
+//     return dataType;
+// }
+
+// unsigned int Data::getSampleSize(){
+//     return sampleSize;
+// }
+
+// void Data::printID()
+// {
+//     utility::print1DVector(id);
+// }
+
+// void Data::printY()
+// {
+//     utility::print2DVector(y);
+// }
+
+// void Data::printActions()
+// {
+//     utility::print2DVector(actions);
+// }
+
+// void Data::printX_Cont()
+// {
+//     utility::print2DVector(x_Cont);
+// }
+
+// void Data::printX_Ord()
+// {
+//     utility::print2DVector(x_Ord);
+// }
+
+// void Data::printX_Nom()
+// {
+//     utility::print2DVector(x_Nom);
+// }
+
+// void Data::printX_Type()
+// {
+//     utility::print1DVector(dataType);
+// }
