@@ -1,28 +1,28 @@
+#include "pch.h"
 #include "DataInfo.h"
 
-void DataInfo::load_DataInfo(int no, int type, vector<int> &dataSetColumn)
-{
-    varNo = no;
-    varType = type;
+DataInfo::DataInfo(unsigned int no, unsigned int type, vector<unsigned int> dataSetColumn) {
+	this->varNo = no;
+	this->varType = type;
+	vector<unsigned int> rangeCont{ 1,2,3,4,5,6,7,8,9,10 };
 
-    if(type==2)
-    {
-        nomCuts = createSets(uniqueValues(dataSetColumn));
-        range = createNomRange(nomCuts.size());
-    }
-    else if(type==1)
-    {
-        range = createOrdRange(uniqueValues(dataSetColumn));
-    }
-    else if(type==0)
-    {
-        range = {1,2,3,4,5,6,7,8,9,10};
-    }
-    else
-    {
-        cout<<"\n Incorrect input for data type.\n";
-    }
-
+	if (type == 2)
+	{
+		nomCuts = createSets(uniqueValues(dataSetColumn));
+		range = createNomRange(nomCuts.size());
+	}
+	else if (type == 1)
+	{
+		range = createOrdRange(uniqueValues(dataSetColumn));
+	}
+	else if (type == 0)
+	{
+		range = rangeCont;
+	}
+	else
+	{
+		cout << "\n Incorrect input for data type.\n";
+	}
 }
 
 DataInfo::~DataInfo()
@@ -32,26 +32,27 @@ DataInfo::~DataInfo()
 
 
 
-int DataInfo:: getVarNo()
+unsigned int DataInfo:: getVarNo()
 {
     return varNo;
 }
 
-int DataInfo:: getVarType()
+unsigned int DataInfo:: getVarType()
 {
     return varType;
 }
 
-bool DataInfo:: nomContains(int x,int index)
+bool DataInfo:: nomContains(unsigned int x,unsigned int index)
 {
     return nomCuts[index].count(x)?true:false;
 }
-int DataInfo:: getCutSize()
+
+unsigned int DataInfo:: getCutSize()
 {
     return (varType == 2)?nomCuts.size():range.size();
 }
 
-void DataInfo:: printSet(int i)
+void DataInfo:: printSet(unsigned int i)
 {
     cout<<"< ";
     for(auto it = nomCuts[i].cbegin(); it!=nomCuts[i].cend(); ++it)
@@ -70,7 +71,7 @@ void DataInfo:: printVarInfo()
         for(size_t i=0; i<nomCuts.size(); ++i)
         {
             cout<<i<<"::\t< ";
-            for(set<int>::iterator it = nomCuts[i].begin(); it!=nomCuts[i].end(); ++it)
+            for(set<unsigned int>::iterator it = nomCuts[i].begin(); it!=nomCuts[i].end(); ++it)
             {
                 cout<<*it<<' ';
             }
@@ -89,7 +90,7 @@ void DataInfo:: printVarInfo()
 
 
 /// Return vector of unique values of a int vector
-vector<int> DataInfo :: uniqueValues(vector<int> &vectorIn)
+vector<unsigned int> DataInfo :: uniqueValues(vector<unsigned int> &vectorIn)
 {
     if(!vectorIn.empty())
     {
@@ -108,14 +109,14 @@ vector<int> DataInfo :: uniqueValues(vector<int> &vectorIn)
 
 
 
-vector<set<int>> DataInfo :: createSets(vector<int> setIn)
+vector<set<unsigned int>> DataInfo :: createSets(vector<unsigned int> setIn)
 {
-    vector<set<int>> out;
+    vector<set<unsigned int>> out;
 
-    int max = 1 << setIn.size();
-    for(int i = 0; i < max; i++)
+    unsigned int max = 1 << setIn.size();
+    for(unsigned int i = 0; i < max; i++)
     {
-        set<int> Second;
+        set<unsigned int> Second;
 
         int j = i;
         int index = 0;
@@ -135,10 +136,10 @@ vector<set<int>> DataInfo :: createSets(vector<int> setIn)
 }
 
 
-vector<int> DataInfo :: createNomRange(int x)
+vector<unsigned int> DataInfo :: createNomRange(unsigned int x)
 {
-    vector<int> out;
-    for(int i=0; i<x; ++i)
+    vector<unsigned int> out;
+    for(unsigned int i=0; i<x; ++i)
     {
         out.push_back(i);
     }
@@ -146,7 +147,7 @@ vector<int> DataInfo :: createNomRange(int x)
 }
 
 
-vector<int> DataInfo :: createOrdRange(vector<int> v)
+vector<unsigned int> DataInfo :: createOrdRange(vector<unsigned int> v)
 {
     for(auto x=begin(v); x!=end(v); ++x)
     {

@@ -1,9 +1,10 @@
+#include "pch.h"
 #include "Res.h"
 
-Res::Res(double res, vector<int> ind, int dir)
+Res::Res(double res, vector<unsigned int> ind, int dir)
 {
     result = (float)res;
-    index = &ind;
+    index = ind;
     direction = dir;
 }
 
