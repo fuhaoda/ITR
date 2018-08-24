@@ -1,28 +1,5 @@
-Version 1.0 focus on run time performance
-
-### List of files:   
-DataGeneration.cpp	   
-DataGeneration.h	   
-DataInfo.cpp	  
-DataInfo.h	  
-FlexDepthSearch.cpp	   
-FlexDepthSearch.h	  
-ITR.cpp	   
-ITR.h	   
-Res.cpp	   
-Res.h	  
-ThreeDepthSearch.cpp	  
-ThreeDepthSearch.h	  
-main.cpp   
-
-### Structure:
-* main.cpp 
-* DataGeneration.h
-* DataInfo.h	
-* Res.h   
-* ITR.h	 
-  * ThreeDepthSearch.h	  
-  * FlexDepthSearch.h	 
-
-Please contact "Jie Xue" for more information.   
-Email: <xue_jie@lilly.com>
+Developed based on version 1.0
+* Apply **decorator pattern** for better scability
+* Able to read CSV data
+* Implement Python for  verification
+* Add unit testing by using google test
