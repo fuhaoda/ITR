@@ -1,4 +1,10 @@
 add_executable(demo EXCLUDE_FROM_ALL demo.cpp)
 include_directories(${PROJECT_SOURCE_DIR}/include)
-#  ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(demo PUBLIC itr)
+
+add_custom_command(
+  TARGET demo POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy
+  ${CMAKE_SOURCE_DIR}/demo/TestSample_100.csv
+  ${CMAKE_CURRENT_BINARY_DIR}/TestSample_100.csv
+  )
