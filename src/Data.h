@@ -1,40 +1,50 @@
 #ifndef __DATA_H__
 #define __DATA_H__
 
+#include <string>
+#include <fstream> 
 #include <vector>
 
 namespace ITR {
 
-// Forward declaration of Covariate class 
-class Covariate {
-public:
+struct Covariate {
+  /// Value of the covariate
+  std::vector<int> data;
 
-private:
-  unsigned type_;
-  unsigned cut_size_;
-}; 
-
+  /// Number of cuts
+  unsigned n_cut; 
+};
+  
 class Data {
 public:
-  // Constructor
-  Data();
+  /// Constructor
+  Data(std::string input);
 
 private:
-  unsigned sample_size_;  // Size of the population 
+  /// Load the input data
+  void loadCSV(std::string input); 
 
-  unsigned n_resp_;       // Number of different responses
-  unsigned n_act_;        // Number of different actions
+  /// Convert values of continuous covariates into deciles
+  void clean(const std::vector<std::vector<double>> &continuous); 
+   
+  unsigned sample_size_;  // Size of the population 
   unsigned n_cont_;       // Number of continuous variables
   unsigned n_ord_;        // Number of ordinal variables
   unsigned n_nom_;        // Number of nominal variables
+  unsigned n_act_;        // Number of different actions
+  unsigned n_resp_;       // Number of different responses
+  
+  
+  // Array of subject ID
+  std::vector<unsigned> id_; 
   
   // Response matrix Y[sample_size][n_resp_]
   std::vector<double> resp_; 
   
   // Action matrix A[sample_size][n_act_];
-  std::vector<unsigned> act_; 
+  std::vector<int> act_; 
 
-  // Collection of covariates 
+  // Covariates, continuous variables have been converted to deciles
   std::vector<Covariate> cvar_; 
 };
 

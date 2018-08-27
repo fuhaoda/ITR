@@ -2,28 +2,24 @@
 #define __ITR_H__
 
 #include <string>
-//#include <memory> 
-//#include "Data.h"
-//#include "SearchEngine.h"
 
 namespace ITR {
 
-class ITR { // Individual Treatment Recommender 
+
+class ITR { 
 public:
-  // Constructor
-  // input_file: path to load the input data
-  // search_depth: depth of the search 
-  ITR(std::string input_file, unsigned search_depth);
+  /// Constructor
+  ///
+  /// \param[in] input  Path to load the input data
+  /// \param[in] depth  Depth of the comprehensive search
+  ITR(std::string input, unsigned depth); 
+  
 
-  // Run the comprehensive search
-  void run();
+  /// Run the comprehensive search 
+  void run() const;
 
-  // Report the result of the comprehensive search
-  void report();
-
-  //private:
-  //std::unique_ptr<Data> data_;
-  //std::unique_ptr<SearchEngine> engine_; 
+  /// Report the result of the comprehensive search
+  void report() const; 
 };
 
 } // namespace ITR

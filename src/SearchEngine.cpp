@@ -4,10 +4,8 @@
 
 namespace ITR {
 
-SearchEngine::SearchEngine(unsigned search_depth) {
-  depth_ = search_depth; 
-}; 
-  
+SearchEngine::SearchEngine(unsigned depth) : depth_{depth} {} 
+
 void SearchEngine::run(Data *data) {
   switch (depth_) {
   case 1:

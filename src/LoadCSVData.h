@@ -1,25 +1,25 @@
-#ifndef LOADCSVDATA_H
-#define LOADCSVDATA_H
+// #ifndef LOADCSVDATA_H
+// #define LOADCSVDATA_H
 
-#include "Data.h"
-#include <fstream>
-#include <iostream>
-#include <sstream>
+// #include "Data.h"
+// #include <fstream>
+// #include <iostream>
+// #include <sstream>
 
-using namespace std;
+// using namespace std;
 
 
-class LoadCSVData : public Data
-{
-    public:
-        LoadCSVData(string fInput, bool header = true);
-        virtual ~LoadCSVData();
+// class LoadCSVData : public Data
+// {
+//     public:
+//         LoadCSVData(string fInput, bool header = true);
+//         virtual ~LoadCSVData();
 
-        void loadData();
+//         void loadData();
 
-    private:
-        string fileName;
-        bool isHeader;
-};
+//     private:
+//         string fileName;
+//         bool isHeader;
+// };
 
-#endif // LOADCSVDATA_H
+// #endif // LOADCSVDATA_H
