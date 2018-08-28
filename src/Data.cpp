@@ -83,13 +83,13 @@ void Data::loadCSV(std::string input) {
     // read ordinal covariates
     for (auto i = 0; i < n_ord_; ++i) {
       getline(ss, field, ',');
-      cvar_[iter++].data.push_back(stoi(field));
+      cvar_[iter++].push_back(stoi(field));
     }
 
     // read nominal covariates
     for (auto i = 0; i < n_nom_; ++i) {
       getline(ss, field, ',');
-      cvar_[iter++].data.push_back(stoi(field));
+      cvar_[iter++].push_back(stoi(field));
     }
 
     // read actions
@@ -119,7 +119,7 @@ void Data::clean(const std::vector<std::vector<double>> &continuous) {
     auto sorted = sort_indices(continuous[i]);
 
     // Resize the vector for covariate i
-    cvar_[i].data.resize(sample_size_);
+    cvar_[i].resize(sample_size_);
     
     // Populate covariate i     
     for (auto j = 0; j < sample_size_; ++j) {
@@ -130,7 +130,8 @@ void Data::clean(const std::vector<std::vector<double>> &continuous) {
       // decile value is obtained by taking the floor of the above value divided
       // by 10. As we are operating on positive values here, this is done by a
       // cast from the double value to the integer value. 
-      cvar_[i].data[k] = (j + 0.5) * scaling_factor;
+      //cvar_[i].data[k] = (j + 0.5) * scaling_factor;
+      cvar_[i][k] = (j + 0.5) * scaling_factor; 
     }
   }
 }

@@ -7,12 +7,40 @@
 
 namespace ITR {
 
-struct Covariate {
+class Covariate {
+public:
+  /// Constructor 
+  Covariate() : n_cut_{0}, type_{0} {}
+
+  /// Insert value 
+  void push_back(int v) {
+    data_.push_back(v);
+  }
+
+  /// Resize the underlying data buffer
+  void resize(unsigned size) {
+    data_.resize(size);
+  }
+
+  /// Overload [] operator
+  int& operator [](int idx) {
+    return data_[idx];
+  }
+
+  int operator [] (int idx) const {
+    return data_[idx];
+  }
+  
+private:
   /// Value of the covariate
-  std::vector<int> data;
+  std::vector<int> data_;
 
   /// Number of cuts
-  unsigned n_cut; 
+  unsigned n_cut_;
+
+  /// Type of the covariate, 0 is for continuous, 1 is ordinal,
+  /// and 2 is for nominal
+  unsigned type_;
 };
   
 class Data {
