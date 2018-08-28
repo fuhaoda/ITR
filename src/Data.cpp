@@ -1,231 +1,150 @@
-#include <fstream>
 #include <sstream>
 #include <algorithm>
-#include <numeric> 
+#include <numeric>
+#include <set> 
 #include "Data.h"
+#include "Covariate.h"
 
 namespace ITR {
 
-// Sort an input array and keep tracking of index
-// https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
-template <typename T>
-std::vector<std::size_t> sort_indices(const std::vector<T> &v) {
-  // Initialize original index locations
-  std::vector<size_t> idx(v.size());
-  std::iota(idx.begin(), idx.end(), 0);
-
-  // Sort indices based on comparing values in v
-  std::sort(idx.begin(), idx.end(),
-            [&v](std::size_t i1, std::size_t i2) {return v[i1] < v[i2];});
-
-  return idx;
-}
-
-Data::Data(std::string input)
-  : sample_size_{0}, n_cont_{0}, n_ord_{0},
-    n_nom_{0}, n_act_{0}, n_resp_{0}
-{
+Data::Data(std::string input) {
   // TODO:
   // Switch different load function based on the file format 
   loadCSV(input); 
 } 
 
 void Data::loadCSV(std::string input) {
+  // Open the input CSV file
   std::ifstream infile(input);
-  std::string line; 
+
+  // Parse the header of the input file
+  parseCSVHeader(infile);
+
+  // Load the raw data of the input file 
+  parseCSVRawData(infile); 
+  
+  // Close the input file
+  infile.close(); 
+}
+
+void Data::parseCSVHeader(std::ifstream &infile) {
+  // This function counts the number of continuous, ordinal, nominal variables,
+  // and the number of actions and responses.
+  std::string line;
   std::istringstream ss;
   std::string field;
 
-  // Parse the header of the CSV file
   getline(infile, line);
   ss.str(line);
 
   while (ss.good()) {
     getline(ss, field, ',');
-
+    
     if (field.find("cont") != std::string::npos) {
-      n_cont_++;
+      nCont_++; 
     } else if (field.find("ord") != std::string::npos) {
-      n_ord_++;
+      nOrd_++;
     } else if (field.find("nom") != std::string::npos) {
-      n_nom_++;
+      nNom_++; 
     } else if (field.find("A") != std::string::npos) {
-      n_act_++;
+      nAct_++;
     } else if (field.find("Y") != std::string::npos) {
-      n_resp_++;
+      nResp_++;
     }
   }
+}
 
-  // Load the remaining data 
-  cvar_.resize(n_cont_ + n_ord_ + n_nom_); 
-    
-  // Values of the continuous covariates are saved in a temporary buffer first
-  std::vector<std::vector<double>> cont_buffer; 
-  
+void Data::parseCSVRawData(std::ifstream &infile) {
+  std::string line; 
+  std::istringstream ss;
+  std::string field;
+
+  for (auto i = 0; i < nCont_; ++i)
+    cvar_.push_back(std::make_unique<ContCovariate>());
+
+  for (auto i = 0; i < nOrd_; ++i)
+    cvar_.push_back(std::make_unique<OrdCovariate>());
+
+  for (auto i = 0; i < nNom_; ++i)
+    cvar_.push_back(std::make_unique<NomCovariate>());
+
+  // Save values of the continuous variables in temporary buffer first and then
+  // convert them into deciles
+  std::vector<std::vector<double>> temp_cont(nCont_);
+
+  // Save the unique values of the ordinal and nominal variables while reading
+  // them in.
+  std::vector<std::set<int>> temp_ord(nOrd_);
+  std::vector<std::set<int>> temp_nom(nNom_);
+
+  // Read in the data line by line 
   while (getline(infile, line)) {
-    sample_size_++;
+
+    // Increment the counter for population size
+    nSample_++; 
 
     ss.clear();
     ss.str(line);
 
-    // first read the subject ID
+    // Read subject ID
     getline(ss, field, ',');
     id_.push_back(stoi(field));
-
-    // read continuous covariates
-    for (auto i = 0; i < n_cont_; ++i) {
+    
+    // Read continuous variable
+    for (auto i = 0; i < nCont_; ++i) {      
       getline(ss, field, ',');
-      cont_buffer[i].push_back(stod(field));
+      temp_cont[i].push_back(stod(field));
     }
 
-    auto iter = n_cont_;    
+    // Ordinal variables are saved after continuous variables    
+    auto iter = nCont_;
 
-    // read ordinal covariates
-    for (auto i = 0; i < n_ord_; ++i) {
+    // Read ordinal variable and collect the unique values
+    for (auto i = 0; i < nOrd_; ++i) {
       getline(ss, field, ',');
-      cvar_[iter++].push_back(stoi(field));
+
+      auto val = stoi(field);       
+      cvar_[iter++]->push_back(val);
+      temp_ord[i].insert(val); 
     }
 
-    // read nominal covariates
-    for (auto i = 0; i < n_nom_; ++i) {
+    // Read nominal variable and collect the unique values
+    for (auto i = 0; i < nNom_; ++i) {
       getline(ss, field, ',');
-      cvar_[iter++].push_back(stoi(field));
+
+      auto val = stoi(field);
+      cvar_[iter++]->push_back(val);
+      temp_nom[i].insert(val);
     }
 
-    // read actions
-    for (auto i = 0; i < n_act_; ++i) {
+    // Unlike variables that are operated in column-major, actions and responses
+    // will be operated in row-major. 
+    
+    // NOTE: the code assumes that the input is 0-1 boolean
+    // TODO: handle more generic input values
+    for (auto i = 0; i < nAct_; ++i) {
       getline(ss, field, ',');
-      act_.push_back(stoi(field));
+      act_.push_back(stoi(field)); 
     }
 
-    // read responses
-    for (auto i = 0; i < n_resp_; ++i) {
+    for (auto i = 0; i < nResp_; ++i) {
       getline(ss, field, ',');
       resp_.push_back(stod(field));
     }
   }
 
-  // Convert values of continuous covariates into deciles
-  clean(cont_buffer); 
- 
-  // Close the input file
-  infile.close();
+  // The following tasks can be done in parallel 
+  for (auto i = 0; i < nCont_; ++i) 
+    cvar_[i]->clean(i, temp_cont, temp_ord, temp_nom);
+
+
+  for (auto i = 0; i < nOrd_; ++i)
+    cvar_[i]->clean(i, temp_cont, temp_ord, temp_nom);
+
+  for (auto i = 0; i < nNom_; ++i)
+    cvar_[i]->clean(i, temp_cont, temp_ord, temp_nom); 
 }  
-
-void Data::clean(const std::vector<std::vector<double>> &continuous) {
-  const double scaling_factor = 10.0 / sample_size_; 
-  
-  for (auto i = 0; i < n_cont_; ++i) {
-    auto sorted = sort_indices(continuous[i]);
-
-    // Resize the vector for covariate i
-    cvar_[i].resize(sample_size_);
-    
-    // Populate covariate i     
-    for (auto j = 0; j < sample_size_; ++j) {
-      auto k = sorted[j];
-
-      // The kth component of the covariate is in the jth position of the sorted
-      // value, its percentile is then 100 * (j + 1 - 0.5) / sample_size. The
-      // decile value is obtained by taking the floor of the above value divided
-      // by 10. As we are operating on positive values here, this is done by a
-      // cast from the double value to the integer value. 
-      //cvar_[i].data[k] = (j + 0.5) * scaling_factor;
-      cvar_[i][k] = (j + 0.5) * scaling_factor; 
-    }
-  }
-}
-
-
 
 } // namespace ITR
 
 
-
-// #include "pch.h"
-// #include "Data.h"
-
-// Data::Data()
-// {
-//     //ctor
-// }
-
-// Data::~Data()
-// {
-//     //dtor
-// }
-
-// const vector<unsigned int>& Data :: getID()
-// {
-//     return id;
-// }
-
-// const vector<vector<double>>& Data :: getY()
-// {
-//     return y;
-// }
-
-// const vector<vector<unsigned int>>& Data :: getActions()
-// {
-//     return actions;
-// }
-
-
-// const vector<vector<double>>& Data :: getX_Cont()
-// {
-//     return x_Cont;
-// }
-
-// const vector<vector<unsigned int>>& Data :: getX_Ord()
-// {
-//     return x_Ord;
-// }
-
-// const vector<vector<unsigned int>>& Data :: getX_Nom()
-// {
-//     return x_Nom;
-// }
-
-// const vector<unsigned int>& Data::getX_Type()
-// {
-//     return dataType;
-// }
-
-// unsigned int Data::getSampleSize(){
-//     return sampleSize;
-// }
-
-// void Data::printID()
-// {
-//     utility::print1DVector(id);
-// }
-
-// void Data::printY()
-// {
-//     utility::print2DVector(y);
-// }
-
-// void Data::printActions()
-// {
-//     utility::print2DVector(actions);
-// }
-
-// void Data::printX_Cont()
-// {
-//     utility::print2DVector(x_Cont);
-// }
-
-// void Data::printX_Ord()
-// {
-//     utility::print2DVector(x_Ord);
-// }
-
-// void Data::printX_Nom()
-// {
-//     utility::print2DVector(x_Nom);
-// }
-
-// void Data::printX_Type()
-// {
-//     utility::print1DVector(dataType);
-// }

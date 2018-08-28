@@ -2,67 +2,59 @@
 #define __DATA_H__
 
 #include <string>
-#include <fstream> 
+#include <fstream>
 #include <vector>
+#include <memory>
+#include "Covariate.h"
 
 namespace ITR {
-
-class Covariate {
-public:
-  /// Constructor 
-  Covariate() : n_cut_{0}, type_{0} {}
-
-  /// Insert value 
-  void push_back(int v) {
-    data_.push_back(v);
-  }
-
-  /// Resize the underlying data buffer
-  void resize(unsigned size) {
-    data_.resize(size);
-  }
-
-  /// Overload [] operator
-  int& operator [](int idx) {
-    return data_[idx];
-  }
-
-  int operator [] (int idx) const {
-    return data_[idx];
-  }
-  
-private:
-  /// Value of the covariate
-  std::vector<int> data_;
-
-  /// Number of cuts
-  unsigned n_cut_;
-
-  /// Type of the covariate, 0 is for continuous, 1 is ordinal,
-  /// and 2 is for nominal
-  unsigned type_;
-};
   
 class Data {
 public:
-  /// Constructor
+  // Constructor
   Data(std::string input);
 
+  // Return the number of sample size 
+  unsigned nSample() const { return nSample_; } 
+  
+  // Return the number of covariates
+  unsigned nCvar() const { return cvar_.size(); }
+
+  // Return the number of continuous covariates
+  unsigned nCont() const { return nCont_; }
+
+  // Return the number of ordinal covariates
+  unsigned nOrd() const { return nOrd_; }
+
+  // Return the number of nominal covariates
+  unsigned nNom() const { return nNom_; }
+
+  // Return the number of actions
+  unsigned nAct() const { return nAct_; }
+
+  // Return the number of responses
+  unsigned nResp() const { return nResp_; }
+  
 private:
-  /// Load the input data
+  // Load the input data
   void loadCSV(std::string input); 
 
-  /// Convert values of continuous covariates into deciles
-  void clean(const std::vector<std::vector<double>> &continuous); 
-   
-  unsigned sample_size_;  // Size of the population 
-  unsigned n_cont_;       // Number of continuous variables
-  unsigned n_ord_;        // Number of ordinal variables
-  unsigned n_nom_;        // Number of nominal variables
-  unsigned n_act_;        // Number of different actions
-  unsigned n_resp_;       // Number of different responses
+  // Parse the header of the CSV input file
+  void parseCSVHeader(std::ifstream &infile); 
+
+  // Read and parse the raw data of the CSV input file 
+  void parseCSVRawData(std::ifstream &infile); 
   
-  
+  // Convert values of continuous covariates into deciles
+  void convertContToDeciles(const std::vector<std::vector<double>> &cont); 
+
+  unsigned nSample_ = 0; // Sample size
+  unsigned nCont_ = 0;   // # of continuous variables
+  unsigned nOrd_ = 0;    // # of ordinal variables
+  unsigned nNom_ = 0;    // # of nominal variables
+  unsigned nAct_ = 0;    // # of different actions
+  unsigned nResp_ = 0;   // # of differnet responses 
+    
   // Array of subject ID
   std::vector<unsigned> id_; 
   
@@ -72,8 +64,9 @@ private:
   // Action matrix A[sample_size][n_act_];
   std::vector<int> act_; 
 
-  // Covariates, continuous variables have been converted to deciles
-  std::vector<Covariate> cvar_; 
+  // Covariates, stored in the order of continuous, ordinal, and nominal.
+  // Additionally, values of the continuous covariates are converted into deciles. 
+  std::vector<std::unique_ptr<Covariate>> cvar_;   
 };
 
 

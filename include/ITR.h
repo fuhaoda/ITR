@@ -5,20 +5,15 @@
 
 namespace ITR {
 
-
 class ITR { 
 public:
-  /// Constructor
-  ///
-  /// \param[in] input  Path to load the input data
-  /// \param[in] depth  Depth of the comprehensive search
+  // Constructor
   ITR(std::string input, unsigned depth); 
   
-
-  /// Run the comprehensive search 
+  // Run the comprehensive search 
   void run() const;
 
-  /// Report the result of the comprehensive search
+  // Report the result of the comprehensive search
   void report() const; 
 };
 
