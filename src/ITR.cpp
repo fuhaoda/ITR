@@ -11,15 +11,14 @@ std::unique_ptr<ITR::SearchEngine> engine_;
 namespace ITR {
 
 ITR::ITR(std::string input, unsigned depth) {
-    // Load the input
-  std::cout << "Load input data ...\n";
+  // Load the input file
+  std::cout << "Loading input data ...\n";
   data_ = std::make_unique<Data>(input); 
 
-
-  std::cout << "Instantiate search engine with depth " << depth << "\n"; 
-  engine_ = std::make_unique<SearchEngine>(depth); 
+  // Construct the search engine
+  std::cout << "Creating search engine with depth " << depth << "\n";
+  engine_ = std::make_unique<SearchEngine>(depth);  
 }
-
 
 void ITR::run() const {
   std::cout << "Searching ...\n";

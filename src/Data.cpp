@@ -1,7 +1,4 @@
 #include <sstream>
-#include <algorithm>
-#include <numeric>
-#include <set> 
 #include "Data.h"
 #include "Covariate.h"
 
@@ -20,11 +17,22 @@ void Data::loadCSV(std::string input) {
   // Parse the header of the input file
   parseCSVHeader(infile);
 
-  // Load the raw data of the input file 
-  parseCSVRawData(infile); 
+  // Allocate temporary buffer to load the raw data
+  std::vector<std::vector<double>> cont(nCont_);
+  std::vector<std::vector<int>> ord(nOrd_);
+  std::vector<std::vector<int>> nom(nNom_);
+
+  uniqOrd_.resize(nOrd_);
+  uniqNom_.resize(nNom_); 
+  
+  // Load raw data of the input file
+  loadRawData(infile, cont, ord, nom); 
   
   // Close the input file
   infile.close(); 
+
+  // Parse raw data of the input file
+  parseRawData(cont, ord, nom); 
 }
 
 void Data::parseCSVHeader(std::ifstream &infile) {
@@ -54,34 +62,16 @@ void Data::parseCSVHeader(std::ifstream &infile) {
   }
 }
 
-void Data::parseCSVRawData(std::ifstream &infile) {
+void Data::loadRawData(std::ifstream &infile,
+                       std::vector<std::vector<double>> &cont,
+                       std::vector<std::vector<int>> &ord,
+                       std::vector<std::vector<int>> &nom) {
   std::string line; 
   std::istringstream ss;
   std::string field;
 
-  for (auto i = 0; i < nCont_; ++i)
-    cvar_.push_back(std::make_unique<ContCovariate>());
-
-  for (auto i = 0; i < nOrd_; ++i)
-    cvar_.push_back(std::make_unique<OrdCovariate>());
-
-  for (auto i = 0; i < nNom_; ++i)
-    cvar_.push_back(std::make_unique<NomCovariate>());
-
-  // Save values of the continuous variables in temporary buffer first and then
-  // convert them into deciles
-  std::vector<std::vector<double>> temp_cont(nCont_);
-
-  // Save the unique values of the ordinal and nominal variables while reading
-  // them in.
-  std::vector<std::set<int>> temp_ord(nOrd_);
-  std::vector<std::set<int>> temp_nom(nNom_);
-
-  // Read in the data line by line 
   while (getline(infile, line)) {
-
-    // Increment the counter for population size
-    nSample_++; 
+    nSample_++;
 
     ss.clear();
     ss.str(line);
@@ -89,61 +79,74 @@ void Data::parseCSVRawData(std::ifstream &infile) {
     // Read subject ID
     getline(ss, field, ',');
     id_.push_back(stoi(field));
-    
-    // Read continuous variable
-    for (auto i = 0; i < nCont_; ++i) {      
+
+    // Read continuous variables
+    for (auto i = 0; i < nCont_; ++i) {
       getline(ss, field, ',');
-      temp_cont[i].push_back(stod(field));
+      cont[i].push_back(stod(field)); 
     }
 
-    // Ordinal variables are saved after continuous variables    
-    auto iter = nCont_;
-
-    // Read ordinal variable and collect the unique values
+    // Read ordinal variables
     for (auto i = 0; i < nOrd_; ++i) {
       getline(ss, field, ',');
-
-      auto val = stoi(field);       
-      cvar_[iter++]->push_back(val);
-      temp_ord[i].insert(val); 
+      auto val = stoi(field);
+      ord[i].push_back(val);
+      uniqOrd_[i].insert(val);
     }
 
-    // Read nominal variable and collect the unique values
+    // Read nominal variables
     for (auto i = 0; i < nNom_; ++i) {
       getline(ss, field, ',');
-
       auto val = stoi(field);
-      cvar_[iter++]->push_back(val);
-      temp_nom[i].insert(val);
+      nom[i].push_back(val);
+      uniqNom_[i].insert(val);
     }
 
-    // Unlike variables that are operated in column-major, actions and responses
-    // will be operated in row-major. 
-    
-    // NOTE: the code assumes that the input is 0-1 boolean
-    // TODO: handle more generic input values
+    // Read actions
+    // TODO: handle generic case other than 0-1 boolean 
     for (auto i = 0; i < nAct_; ++i) {
       getline(ss, field, ',');
-      act_.push_back(stoi(field)); 
+      act_.push_back(stoi(field));
     }
-
+    
     for (auto i = 0; i < nResp_; ++i) {
       getline(ss, field, ',');
       resp_.push_back(stod(field));
     }
   }
+}
 
-  // The following tasks can be done in parallel 
-  for (auto i = 0; i < nCont_; ++i) 
-    cvar_[i]->clean(i, temp_cont, temp_ord, temp_nom);
+void Data::parseRawData(std::vector<std::vector<double>> &cont,
+                        std::vector<std::vector<int>> &ord,
+                        std::vector<std::vector<int>> &nom) {
+  // Parse continuous variables
+  for (auto i = 0; i < nCont_; ++i)
+    convertToDeciles(cont[i]);
 
-
+  // Parse ordinal variables
   for (auto i = 0; i < nOrd_; ++i)
-    cvar_[i]->clean(i, temp_cont, temp_ord, temp_nom);
+    convertToRanks(ord[i], uniqOrd_[i]);
 
+  // Parse nominal variables
   for (auto i = 0; i < nNom_; ++i)
-    cvar_[i]->clean(i, temp_cont, temp_ord, temp_nom); 
-}  
+    convertToRanks(nom[i], uniqNom_[i]); 
+
+  // Write the parsed values into cvar_, where variables corresponding to the
+  // same sample are stored contiguously
+  cvar_.resize(nSample_ * (nCont_ + nOrd_ + nNom_));
+
+  int iter = 0;
+  for (auto i = 0; i < nSample_; ++i) {
+    for (auto j = 0; j < nCont_; ++j)
+      cvar_[iter++] = (int) cont[j][i];
+
+    for (auto j = 0; j < nOrd_; ++j)
+      cvar_[iter++] = ord[j][i];
+
+    for (auto j = 0; j < nNom_; ++j)
+      cvar_[iter++] = nom[j][i];
+  }
+}
 
 } // namespace ITR
 

@@ -102,7 +102,9 @@ void CreateLookUpTable :: load_table_X(const vector<vector<unsigned int>> &data_
         {
             for(unsigned int k=0; k<cutSize[i]; ++k)
             {
-                table_X[i][k][j] = (ITR::getVarType()[i] == 2)?info[i]->nomContains(ITR::getX()[i][j],k):ITR::getX()[i][j] < info[i]->getRange(k);
+                table_X[i][k][j] = (ITR::getVarType()[i] == 2)?
+                  info[i]->nomContains(ITR::getX()[i][j],k):
+                  ITR::getX()[i][j] < info[i]->getRange(k);
             }
         }
     }
