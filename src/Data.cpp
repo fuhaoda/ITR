@@ -60,6 +60,8 @@ void Data::parseCSVHeader(std::ifstream &infile) {
       nResp_++;
     }
   }
+
+  nVar_ = nCont_ + nOrd_ + nNom_;   
 }
 
 void Data::loadRawData(std::ifstream &infile,
@@ -133,7 +135,7 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
 
   // Write the parsed values into cvar_, where variables corresponding to the
   // same sample are stored contiguously
-  cvar_.resize(nSample_ * (nCont_ + nOrd_ + nNom_));
+  cvar_.resize(nSample_ * nVar_);
 
   int iter = 0;
   for (auto i = 0; i < nSample_; ++i) {
@@ -146,6 +148,43 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
     for (auto j = 0; j < nNom_; ++j)
       cvar_[iter++] = nom[j][i];
   }
+}
+
+inline int Data::nCut(int i) const {
+  if (i < nCont_) {
+    return 10; 
+  } else if (i < nCont_ + nOrd_) {
+    return uniqOrd_[i].size();
+  } else {
+    // The number of cuts for a nominal variable is the number of subsets that
+    // no more than half of the unique values. 
+    
+    // The subsets used to be stored explicitly. The current implementation
+    // skips this storage.
+    
+    // The function here simply returns the number of unique values, denoted
+    // by p.
+    
+    // The search needs to loop through [0, 2^p). Each iterator is interpreted
+    // as a bitmask, where bit i corresponds to the ith element in the unique
+    // set. For each integer, if the number of 1 bits is no more than p / 2,
+    // then it is a valid cut, where the subset consists of the elements
+    // corresponding to the 1 bits in the integer. 
+    
+    // If iterator 'iter' is a valid subset (cut), one can decide if component
+    // j of the nominal variable belongs to the subset by performing bitwise
+    // AND as component j saves the rank of the original value in the unique
+    // set. 
+    return uniqNom_[i].size();
+  }
+}
+
+inline bool Data::inCut(int i, int j, int k) const {
+  // This function compares row i, column j of the variable matrix against cut k
+  // If column j is a continuous or ordinal variable, we simply compare the value
+  // If column j is a nominal variable, we return the result of bitwise AND
+  auto val = cvar_[i * nVar_ + j];
+  return (j < nCont_ + nOrd_ ? val <= k : val & k);
 }
 
 } // namespace ITR
