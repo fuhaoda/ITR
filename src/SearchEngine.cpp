@@ -5,225 +5,274 @@
 
 namespace ITR {
 
-void SearchEngine::run(const Data *data) {
-  // TODO: Extension needed. The original code assumes that action and response
-  // are column vectors, i.e., only action[i][0] and response[i][0] are used. 
+SearchEngine::SearchEngine(int depth, const Data *data) {
+  depth_ = depth;
+  data_ = data;
 
-  switch (depth_) {
-  case 1:
-    depthOneSearch(data); 
-    break; 
-  case 2:
-    depthTwoSearch(data);
-    break;
-  case 3:
-    depthThreeSearch(data);
-    break;
-  default:
-    break;
+  // Go over the data and find all the possible search choices
+  if (depth == 1) {
+    setDepthOneChoices();
+  } else if (depth == 2) {
+    setDepthTwoChoices();
+  } else { // depth == 3
+    setDepthThreeChoices();
   }
 }
 
-inline void SearchEngine::updateResult(std::vector<double> &result,
-                                       const bool *m,
-                                       const Data *data) const {
-  if (depth_ == 1) {
-    double v[4] = {0.0};
-    v[2 * m[0] + data->act(0,0)] = data->resp(0,0);
+void SearchEngine::run() {
+  // TODO: EXTENSION NEEDED
+  // The origianl code assumes that action and response are column vectors. Only
+  // action[i][0] and response[i][0] are used for each row. 
+  auto nChoices = choices_.size() / depth_;
+  auto nSample = data_->nSample();
 
-    for (auto i = 0; i < 4; ++i)
-      result.push_back(v[i]); 
-  } else if (depth_ == 2) {
-    double v[8] = {0.0};
-    v[4 * m[0] + 2 * m[1] + data->act(0,0)] = data->resp(0,0);
-
-    for (auto i = 0; i < 8; ++i)
-      result.push_back(v[i]);
-  } else { // depth_ == 3
-    double v[16] = {0.0};
-    v[8 * m[0] + 4 * m[1] + 2 * m[2] + data->act(0,0)] = data->resp(0,0);
-    
-    for (auto i = 0; i < 16; ++i)
-      result.push_back(v[i]);
-  }
-}
-
-void SearchEngine::depthOneSearch(const Data *data) {
-  std::cout << "Depth one search ...\n";
-
-  auto nSample = data->nSample();
-  auto nCont = data->nCont();
-  auto nOrd = data->nOrd();
-  auto nVar = data->nVar(); 
-
-  // Vector to save the search result
-  std::vector<double> result;
-
-  // Vector to save the cut information
-  std::vector<CutInfo<1>> info; 
-
-  // Go over row zero of the continuous and ordinal variables
-  for (auto j = 0; j < nCont + nOrd; ++j) {
-    auto nCut = data->nCut(j);
-    for (auto k = 0; k < nCut; ++k) {
-      int cut[2] = {j, k}; 
-      info.emplace_back(cut);
-
-      auto mask = data->inCut(0, j, k); 
-      updateResult(result, &mask, data);
-    }
-  }
-
-  // Go over row zero of the nominal variable
-  for (auto j = nCont + nOrd; j < nVar; ++j) {
-    auto nUniq = data->nCut(j);
-    auto nMax = 1 << nUniq;
-    auto nUniqHalf = nUniq / 2;
-    for (auto k = 0; k < nMax; ++k) {
-      std::bitset<64> subset(k);
-      if (subset.count() > nUniqHalf)
-        continue;
-
-      int cut[2] = {j, k};
-      info.emplace_back(cut);
-
-      auto mask = data->inCut(0, j, k);
-      updateResult(result, &mask, data);
-    }
-  }
-    
-  // Go over the remaining rows of the variables
-  for (auto i = 1; i < nSample; ++i) {
-    int iter = 0;
-
-    // Go over all possible cuts on row i of the variables
-    for (auto const &cut : info) {
-      auto mask = data->inCut(i, cut.info[0], cut.info[1]);
-      result[iter + 2 * mask + data->act(i, 0)] += data->resp(i, 0);
-      iter += 4;
-    }
-  }
-
-  for (auto i = 0; i < info.size(); ++i) {
-    double *r = &result[4 * i];
-    r[0] = r[1] - r[0];
-    r[2] = r[3] - r[2];
-  }
-
-  // TODO, sort and save the best value and the corresponding cut? 
-}
-
-void SearchEngine::depthTwoSearch(const Data *data) {
-  std::cout << "Depth two search ...\n";
-
-  auto nSample = data->nSample();
-  auto nCont = data->nCont();
-  auto nOrd = data->nOrd();
-  auto nVar = data->nVar();
-
-  // Vector to save the search result
-  std::vector<double> result;
-
-  // Vector to save the cut information
-  std::vector<CutInfo<2>> info; 
+  result_.resize(nChoices * (1 << (depth_ + 1)));
   
-  // Go over row zero to discover all the cuts
+  if (depth_ == 1) {
+    for (auto i = 0; i < nSample; ++i) {
+      int act = data_->act(i, 0);
+      double resp = data_->resp(i, 0); 
+      for (auto j = 0; j < nChoices; ++j) {
+        bool m1 = data_->inCut(i, choices_[2 * j], choices_[2 * j + 1]);
+        result_[4 * j + 2 * m1 + act] += resp; 
+      }
+    }
+
+    for (auto i = 0; i < nChoices; ++i) {
+      double *r = &result_[4 * i];
+      r[0] = r[1] - r[0];
+      r[1] = r[3] - r[2];
+    }        
+  } else if (depth_ == 2) {
+    for (auto i = 0; i < nSample; ++i) {
+      int act = data_->act(i, 0);
+      double resp = data_->resp(i, 0); 
+      for (auto j = 0; j < nChoices; ++j) {
+        bool m1 = data_->inCut(i, choices_[2 * j], choices_[2 * j + 1]);
+        bool m2 = data_->inCut(i, choices_[2 * j + 2], choices_[2 * j + 3]); 
+        result_[8 * j + 4 * m1 + 2 * m2 + act] += resp;
+      }
+    }
+
+    for (auto i = 0; i < nChoices; ++i) {
+      double *r = &result_[8 * i];
+      r[0] = r[1] - r[0];
+      r[1] = r[3] - r[2];
+      r[2] = r[5] - r[4];
+      r[3] = r[7] - r[6];
+    }
+  } else { // depth_ == 3
+    for (auto i = 0; i < nSample; ++i) {
+      int act = data_->act(i, 0);
+      double resp = data_->resp(i, 0); 
+      for (auto j = 0; j < nChoices; ++j) {
+        bool m1 = data_->inCut(i, choices_[2 * j], choices_[2 * j + 1]);
+        bool m2 = data_->inCut(i, choices_[2 * j + 2], choices_[2 * j + 3]);
+        bool m3 = data_->inCut(i, choices_[2 * j + 4], choices_[2 * j + 5]);
+        result_[16 * j + 8 * m1 + 4 * m2 + 2 * m3 + act] += resp;
+      }
+    }
+
+    for (auto i = 0; i < nChoices; ++i) {
+      double *r = &result_[16 * i];
+      r[0] = r[1] - r[0];
+      r[1] = r[3] - r[2];
+      r[2] = r[5] - r[4];
+      r[3] = r[7] - r[6];
+      r[4] = r[9] - r[8];
+      r[5] = r[11] - r[10];
+      r[6] = r[13] - r[12];
+      r[7] = r[15] - r[14];
+    }
+  }
+}
+
+void SearchEngine::setDepthOneChoices() {
+  auto nCont = data_->nCont();
+  auto nOrd = data_->nOrd();
+  auto nVar = data_->nVar();
+  for (auto j = 0; j < nCont + nOrd; ++j) {
+    for (auto k = 0; k < data_->nCut(j); ++k) {
+      choices_.push_back(j); // variable j
+      choices_.push_back(k); // cut k
+    }
+  }
+
+  for (auto j = nCont + nOrd; j < nVar; ++j) {
+    auto max = 1 << data_->nCut(j);
+    auto half = data_->nCut(j) / 2;
+    for (auto k = 0; k < max; ++k) {
+      std::bitset<64> subset(k);
+      if (subset.count() <= half) {
+        choices_.push_back(j); // variable j
+        choices_.push_back(k); // cut k
+      }
+    }
+  }            
+}
+
+void SearchEngine::setDepthTwoChoices() {
+  auto nCont = data_->nCont();
+  auto nOrd = data_->nOrd();
+  auto nVar = data_->nVar();
+
   for (auto j1 = 0; j1 < nCont + nOrd; ++j1) {
-    auto nCut1 = data->nCut(j1);
-
     for (auto j2 = j1 + 1; j2 < nCont + nOrd; ++j2) {
-      auto nCut2 = data->nCut(j2);
-
-      for (auto c1 = 0; c1 < nCut1; ++c1) {
-        for (auto c2 = 0; c2 < nCut2; ++c2) {
-          int cut[4] = {j1, c1, j2, c2};
-          info.emplace_back(cut);
-
-          bool mask[2]{data->inCut(0, j1, c1), data->inCut(0, j2, c2)};
-          updateResult(result, mask, data);
+      for (auto k1 = 0; k1 < data_->nCut(j1); ++k1) {
+        for (auto k2 = 0; k2 < data_->nCut(j2); ++k2) {
+          choices_.push_back(j1);
+          choices_.push_back(k1);
+          choices_.push_back(j2);
+          choices_.push_back(k2);
         }
       }
     }
 
-
     for (auto j2 = nCont + nOrd; j2 < nVar; ++j2) {
-      auto nUniq2 = data->nCut(j2);
-      auto nMax2 = 1 << nUniq2;
-      auto nUniq2Half = nUniq2 / 2;
-
-      for (auto c2 = 0; c2 < nMax2; ++c2) {
-        std::bitset<64> subset2(c2);
-        if (subset2.count() > nUniq2Half)
-          continue;
-
-        for (auto c1 = 0; c1 < nCut1; ++c1) {
-          int cut[4] = {j1, c1, j2, c2};
-          info.emplace_back(cut);
-
-          bool mask[2]{data->inCut(0, j1, c1),  data->inCut(0, j2, c2)}; 
-          updateResult(result, mask, data);
+      auto max2 = 1 << data_->nCut(j2);
+      auto half2 = data_->nCut(j2) / 2;
+      for (auto k2 = 0; k2 < max2; ++k2) {
+        std::bitset<64> subset2(k2);
+        if (subset2.count() <= half2) {
+          for (auto k1 = 0; k1 < data_->nCut(j1); ++k1) {
+            choices_.push_back(j1);
+            choices_.push_back(k1);
+            choices_.push_back(j2);
+            choices_.push_back(k2);
+          }
         }
       }
     }
   }
 
   for (auto j1 = nCont + nOrd; j1 < nVar; ++j1) {
-    auto nUniq1 = data->nCut(j1);
-    auto nMax1 = 1 << nUniq1;
-    auto nUniq1Half = nUniq1 / 2;
-
+    auto max1 = 1 << data_->nCut(j1);
+    auto half1 = data_->nCut(j1) / 2;
     for (auto j2 = j1 + 1; j2 < nVar; ++j2) {
-      auto nUniq2 = data->nCut(j2);
-      auto nMax2 = 1 << nUniq2;
-      auto nUniq2Half = nUniq2 / 2;
+      auto max2 = 1 << data_->nCut(j2);
+      auto half2 = data_->nCut(j2) / 2;
+      for (auto k1 = 0; k1 < max1; ++k1) {
+        std::bitset<64> subset1(k1);
+        if (subset1.count() <= half1) {
+          for (auto k2 = 0; k2 < max2; ++k2) {
+            std::bitset<64> subset2(k2);
+            if (subset2.count() <= half2) {
+              choices_.push_back(j1);
+              choices_.push_back(k1);
+              choices_.push_back(j2);
+              choices_.push_back(k2);
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
-      for (auto c1 = 0; c1 < nMax1; ++c1) {
-        std::bitset<64> subset1(c1);
-        if (subset1.count() > nUniq1Half)
-          continue;
+void SearchEngine::setDepthThreeChoices() {
+  auto nCont = data_->nCont();
+  auto nOrd = data_->nOrd();
+  auto nVar = data_->nVar();
 
-        for (auto c2 = 0; c2 < nMax2; ++c2) {
-          std::bitset<64> subset2(c2);
-          if (subset2.count() > nUniq2Half)
-            continue;
+  for (auto j1 = 0; j1 < nCont + nOrd; ++j1) {
+    for (auto j2 = j1 + 1; j2 < nCont + nOrd; ++j2) {
+      for (auto j3 = j2 + 1; j3 < nCont + nOrd; ++j3) {
+        for (auto k1 = 0; k1 < data_->nCut(j1); ++k1) {
+          for (auto k2 = 0; k2 < data_->nCut(j2); ++k2) {
+            for (auto k3 = 0; k3 < data_->nCut(j3); ++k3) {
+              choices_.push_back(j1);
+              choices_.push_back(k1);
+              choices_.push_back(j2);
+              choices_.push_back(k2);
+              choices_.push_back(j3);
+              choices_.push_back(k3);
+            }
+          }
+        }
+      }
 
-          int cut[4] = {j1, c1, j2, c2};
-          info.emplace_back(cut);
+      for (auto j3 = nCont + nOrd; j3 < nVar; ++j3) {
+        auto max3 = 1 << data_->nCut(j3);
+        auto half3 = data_->nCut(j3) / 2;
+        for (auto k3 = 0; k3 < max3; ++k3) {
+          std::bitset<64> subset3(k3);
+          if (subset3.count() <= half3) {
+            for (auto k1 = 0; k1 < data_->nCut(j1); ++k1) {
+              for (auto k2 = 0; k2 < data_->nCut(j2); ++k2) {
+                choices_.push_back(j1);
+                choices_.push_back(k1);
+                choices_.push_back(j2);
+                choices_.push_back(k2);
+                choices_.push_back(j3);
+                choices_.push_back(k3);
+              }
+            }
+          }
+        }
+      }
+    }
 
-          bool mask[2]{data->inCut(0, j1, c1), data->inCut(0, j2, c2)};
-          updateResult(result, mask, data);
+    for (auto j2 = nCont + nOrd; j2 < nVar; ++j2) {
+      auto max2 = 1 << data_->nCut(j2);
+      auto half2 = data_->nCut(j2) / 2; 
+      for (auto j3 = j2 + 1; j3 < nVar; ++j3) {
+        auto max3 = 1 << data_->nCut(j3);
+        auto half3 = data_->nCut(j3) / 2;
+        for (auto k2 = 0; k2 < max2; ++k2) {
+          std::bitset<64> subset2(k2);
+          if (subset2.count() <= half2) {
+            for (auto k3 = 0; k3 < max3; ++k3) {
+              std::bitset<64> subset3(k3);
+              if (subset3.count() <= half3) {
+                for (auto k1 = 0; k1 < data_->nCut(j1); ++k1) {
+                  choices_.push_back(j1);
+                  choices_.push_back(k1);
+                  choices_.push_back(j2);
+                  choices_.push_back(k2);
+                  choices_.push_back(j3);
+                  choices_.push_back(k3);
+                }
+              }
+            }
+          }
         }
       }
     }
   }
 
-  // Go over the remaining rows of the variables
-  for (auto i = 1; i < nSample; ++i) {
-    int iter = 0;
-
-    // Go over all possible cuts on row i of the variables
-    for (auto const &cut : info) {
-      auto m1 = data->inCut(i, cut.info[0], cut.info[1]);
-      auto m2 = data->inCut(i, cut.info[2], cut.info[3]);
-      result[iter + 4 * m1 + 2 * m2 + data->act(i, 0)] += data->resp(i, 0);
-      iter += 8;
+  for (auto j1 = nCont + nOrd; j1 < nVar; ++j1) {
+    auto max1 = 1 << data_->nCut(j1);
+    auto half1 = data_->nCut(j1) / 2; 
+    for (auto j2 = j1 + 1; j2 < nVar; ++j2) {
+      auto max2 = 1 << data_->nCut(j2);
+      auto half2 = data_->nCut(j2) / 2; 
+      for (auto j3 = j2 + 1; j3 < nVar; ++j3) {
+        auto max3 = 1 << data_->nCut(j3);
+        auto half3 = data_->nCut(j3) / 2;
+        for (auto k1 = 0; k1 < max1; ++k1) {
+          std::bitset<64> subset1(k1);
+          if (subset1.count() <= half1) {
+            for (auto k2 = 0; k2 < max2; ++k2) {
+              std::bitset<64> subset2(k2);
+              if (subset2.count() <= half2) {
+                for (auto k3 = 0; k3 < max3; ++k3) {
+                  std::bitset<64> subset3(k3);
+                  if (subset3.count() <= half3) {
+                    choices_.push_back(j1);
+                    choices_.push_back(k1);
+                    choices_.push_back(j2);
+                    choices_.push_back(k2);
+                    choices_.push_back(j3);
+                    choices_.push_back(k3);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
-  }
-
-  for (auto i = 0; i < info.size(); ++i) {
-    double *r = &result[8 *i];
-    r[0] = r[1] - r[0];
-    r[1] = r[3] - r[2];
-    r[2] = r[5] - r[4];
-    r[3] = r[7] - r[6];
-  }
+  }  
 }
-
-void SearchEngine::depthThreeSearch(const Data *data) {
-  std::cout << "Depth three search ...\n"; 
-}
-
-
-
 
 } // namespace ITR
