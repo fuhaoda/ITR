@@ -1,4 +1,5 @@
-#include <numeric> 
+#include <numeric>
+#include <map> 
 #include "Covariate.h"
 
 namespace ITR {
@@ -18,7 +19,7 @@ std::vector<std::size_t> sort_indices(const std::vector<T> &v) {
   return idx;
 }
 
-void convertToDeciles(std::vector<double> &cont) {
+void convertContToDeciles(std::vector<double> &cont) {
   auto nSample = cont.size();
   const double scaling_factor = 10.0 / nSample;
 
@@ -35,8 +36,8 @@ void convertToDeciles(std::vector<double> &cont) {
   }
 }
 
-void convertToRanks(std::vector<int> &ord,
-                    std::set<int> &uniq) {
+void convertOrdToRanks(std::vector<int> &ord,
+                       std::set<int> &uniq) {
   auto largest = *uniq.rbegin();
 
   // Create a reverse table
@@ -51,5 +52,20 @@ void convertToRanks(std::vector<int> &ord,
   for (auto &v : ord)
     v = reverse_table[v]; 
 }
+
+void convertNomToRanks(std::vector<int> &ord,
+                       std::set<int> &uniq) {
+  // Create a reverse map
+  std::map<int, int> reverse_map;
+
+  int rank = 0; 
+  for (auto &v : uniq)
+    reverse_map[v] = rank++;
+
+  // Replace the nominal values with the corresponding ranks in the unique set
+  for (auto &v : ord) 
+    v = (1 << reverse_map[v]);    
+}
+
 
 } // namespace ITR
