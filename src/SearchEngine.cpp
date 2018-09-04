@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <bitset>
+#include <algorithm>
 #include "SearchEngine.h"
 
 namespace ITR {
@@ -23,66 +24,89 @@ void SearchEngine::run() {
   // TODO: EXTENSION NEEDED
   // The origianl code assumes that action and response are column vectors. Only
   // action[i][0] and response[i][0] are used for each row. 
-  auto nChoices = choices_.size() / depth_;
+  //auto nChoice = choices_.size() / depth_ / 2;
+  auto nChoice = log_.size();   
   auto nSample = data_->nSample();
+  auto T0 = data_->T0();
+  auto scaling_factor = 1.0 / nSample; 
 
-  result_.resize(nChoices * (1 << (depth_ + 1)));
-  
   if (depth_ == 1) {
-    for (auto i = 0; i < nSample; ++i) {
-      int act = data_->act(i, 0);
-      double resp = data_->resp(i, 0); 
-      for (auto j = 0; j < nChoices; ++j) {
-        bool m1 = data_->inCut(i, choices_[2 * j], choices_[2 * j + 1]);
-        result_[4 * j + 2 * m1 + act] += resp; 
+    for (auto i = 0; i < nChoice; ++i) {
+      double v[4] = {0.0};
+      auto vIdx = log_[i].vIdx[0];
+      auto cIdx = log_[i].cIdx[0]; 
+      for (auto j = 0; j < nSample; ++j) {
+        auto m = data_->inCut(j, vIdx, cIdx);
+        auto act = data_->act(j, 0);
+        auto resp = data_->resp(j, 0);
+        v[2 * m + act] += resp;
       }
-    }
 
-    for (auto i = 0; i < nChoices; ++i) {
-      double *r = &result_[4 * i];
-      r[0] = r[1] - r[0];
-      r[1] = r[3] - r[2];
-    }        
+      v[0] = v[1] - v[0];
+      v[1] = v[3] - v[2];
+           
+      if (v[0] < v[1]) {
+        log_[i].result = (v[0] + T0) * scaling_factor;
+        log_[i].rank = 0;
+      } else {
+        log_[i].result = (v[1] + T0) * scaling_factor;
+        log_[i].rank = 1;
+      }
+    }  
   } else if (depth_ == 2) {
-    for (auto i = 0; i < nSample; ++i) {
-      int act = data_->act(i, 0);
-      double resp = data_->resp(i, 0); 
-      for (auto j = 0; j < nChoices; ++j) {
-        bool m1 = data_->inCut(i, choices_[2 * j], choices_[2 * j + 1]);
-        bool m2 = data_->inCut(i, choices_[2 * j + 2], choices_[2 * j + 3]); 
-        result_[8 * j + 4 * m1 + 2 * m2 + act] += resp;
+    for (auto i = 0; i < nChoice; ++i) {
+      double v[8] = {0.0};
+      auto vIdx1 = log_[i].vIdx[0];
+      auto vIdx2 = log_[i].vIdx[1];
+      auto cIdx1 = log_[i].cIdx[0];
+      auto cIdx2 = log_[i].cIdx[1]; 
+      for (auto j = 0; j < nSample; ++j) {
+        auto m1 = data_->inCut(j, vIdx1, cIdx1);
+        auto m2 = data_->inCut(j, vIdx2, cIdx2);
+        auto act = data_->act(j, 0);
+        auto resp = data_->resp(j, 0);
+        v[4 * m1 + 2 * m2 + act] += resp;
       }
-    }
 
-    for (auto i = 0; i < nChoices; ++i) {
-      double *r = &result_[8 * i];
-      r[0] = r[1] - r[0];
-      r[1] = r[3] - r[2];
-      r[2] = r[5] - r[4];
-      r[3] = r[7] - r[6];
+      v[0] = v[1] - v[0];
+      v[1] = v[3] - v[2];
+      v[2] = v[5] - v[4];
+      v[3] = v[7] - v[6];
+
+      const auto ptr = std::max_element(v, v + 4);
+      log_[i].result = (*ptr + T0) * scaling_factor;
+      log_[i].rank = ptr - v; 
     }
   } else { // depth_ == 3
-    for (auto i = 0; i < nSample; ++i) {
-      int act = data_->act(i, 0);
-      double resp = data_->resp(i, 0); 
-      for (auto j = 0; j < nChoices; ++j) {
-        bool m1 = data_->inCut(i, choices_[2 * j], choices_[2 * j + 1]);
-        bool m2 = data_->inCut(i, choices_[2 * j + 2], choices_[2 * j + 3]);
-        bool m3 = data_->inCut(i, choices_[2 * j + 4], choices_[2 * j + 5]);
-        result_[16 * j + 8 * m1 + 4 * m2 + 2 * m3 + act] += resp;
+    for (auto i = 0; i < nChoice; ++i) {
+      double v[16] = {0.0};
+      auto vIdx1 = log_[i].vIdx[0];
+      auto vIdx2 = log_[i].vIdx[1];
+      auto vIdx3 = log_[i].vIdx[2];
+      auto cIdx1 = log_[i].cIdx[0];
+      auto cIdx2 = log_[i].cIdx[1];
+      auto cIdx3 = log_[i].cIdx[2];
+      for (auto j = 0; j < nSample; ++j) {
+        auto m1 = data_->inCut(j, vIdx1, cIdx1);
+        auto m2 = data_->inCut(j, vIdx2, cIdx2);
+        auto m3 = data_->inCut(j, vIdx3, cIdx3);
+        auto act = data_->act(j, 0);
+        auto resp = data_->resp(j, 0);
+        v[8 * m1 + 4 * m2 + 2 * m3 + act] += resp;
       }
-    }
 
-    for (auto i = 0; i < nChoices; ++i) {
-      double *r = &result_[16 * i];
-      r[0] = r[1] - r[0];
-      r[1] = r[3] - r[2];
-      r[2] = r[5] - r[4];
-      r[3] = r[7] - r[6];
-      r[4] = r[9] - r[8];
-      r[5] = r[11] - r[10];
-      r[6] = r[13] - r[12];
-      r[7] = r[15] - r[14];
+      v[0] = v[1] - v[0];
+      v[1] = v[3] - v[2];
+      v[2] = v[5] - v[4];
+      v[3] = v[7] - v[6];
+      v[4] = v[9] - v[8];
+      v[5] = v[11] - v[10];
+      v[6] = v[13] - v[12];
+      v[7] = v[15] - v[14];
+
+      const auto ptr = std::max_element(v, v + 8);
+      log_[i].result = (*ptr + T0) * scaling_factor;
+      log_[i].rank = ptr - v; 
     }
   }
 }
@@ -93,8 +117,10 @@ void SearchEngine::setDepthOneChoices() {
   auto nVar = data_->nVar();
   for (auto j = 0; j < nCont + nOrd; ++j) {
     for (auto k = 0; k < data_->nCut(j); ++k) {
-      choices_.push_back(j); // variable j
-      choices_.push_back(k); // cut k
+      MetaData record; 
+      record.vIdx.push_back(j);
+      record.cIdx.push_back(k);
+      log_.push_back(std::move(record)); 
     }
   }
 
@@ -104,8 +130,10 @@ void SearchEngine::setDepthOneChoices() {
     for (auto k = 0; k < max; ++k) {
       std::bitset<64> subset(k);
       if (subset.count() <= half) {
-        choices_.push_back(j); // variable j
-        choices_.push_back(k); // cut k
+        MetaData record;
+        record.vIdx.push_back(j);
+        record.cIdx.push_back(k);
+        log_.push_back(std::move(record));       
       }
     }
   }            
@@ -120,10 +148,12 @@ void SearchEngine::setDepthTwoChoices() {
     for (auto j2 = j1 + 1; j2 < nCont + nOrd; ++j2) {
       for (auto k1 = 0; k1 < data_->nCut(j1); ++k1) {
         for (auto k2 = 0; k2 < data_->nCut(j2); ++k2) {
-          choices_.push_back(j1);
-          choices_.push_back(k1);
-          choices_.push_back(j2);
-          choices_.push_back(k2);
+          MetaData record;
+          record.vIdx.push_back(j1);
+          record.vIdx.push_back(j2);
+          record.cIdx.push_back(k1);
+          record.cIdx.push_back(k2);
+          log_.push_back(std::move(record));           
         }
       }
     }
@@ -135,10 +165,12 @@ void SearchEngine::setDepthTwoChoices() {
         std::bitset<64> subset2(k2);
         if (subset2.count() <= half2) {
           for (auto k1 = 0; k1 < data_->nCut(j1); ++k1) {
-            choices_.push_back(j1);
-            choices_.push_back(k1);
-            choices_.push_back(j2);
-            choices_.push_back(k2);
+            MetaData record;
+            record.vIdx.push_back(j1);
+            record.vIdx.push_back(j2);
+            record.cIdx.push_back(k1);
+            record.cIdx.push_back(k2);
+            log_.push_back(std::move(record));           
           }
         }
       }
@@ -157,10 +189,12 @@ void SearchEngine::setDepthTwoChoices() {
           for (auto k2 = 0; k2 < max2; ++k2) {
             std::bitset<64> subset2(k2);
             if (subset2.count() <= half2) {
-              choices_.push_back(j1);
-              choices_.push_back(k1);
-              choices_.push_back(j2);
-              choices_.push_back(k2);
+              MetaData record;
+              record.vIdx.push_back(j1);
+              record.vIdx.push_back(j2);
+              record.cIdx.push_back(k1);
+              record.cIdx.push_back(k2);
+              log_.push_back(std::move(record));                         
             }
           }
         }
@@ -180,12 +214,14 @@ void SearchEngine::setDepthThreeChoices() {
         for (auto k1 = 0; k1 < data_->nCut(j1); ++k1) {
           for (auto k2 = 0; k2 < data_->nCut(j2); ++k2) {
             for (auto k3 = 0; k3 < data_->nCut(j3); ++k3) {
-              choices_.push_back(j1);
-              choices_.push_back(k1);
-              choices_.push_back(j2);
-              choices_.push_back(k2);
-              choices_.push_back(j3);
-              choices_.push_back(k3);
+              MetaData record;
+              record.vIdx.push_back(j1);
+              record.vIdx.push_back(j2);
+              record.vIdx.push_back(j3);
+              record.cIdx.push_back(k1);
+              record.cIdx.push_back(k2);
+              record.cIdx.push_back(k3); 
+              log_.push_back(std::move(record));                         
             }
           }
         }
@@ -199,12 +235,14 @@ void SearchEngine::setDepthThreeChoices() {
           if (subset3.count() <= half3) {
             for (auto k1 = 0; k1 < data_->nCut(j1); ++k1) {
               for (auto k2 = 0; k2 < data_->nCut(j2); ++k2) {
-                choices_.push_back(j1);
-                choices_.push_back(k1);
-                choices_.push_back(j2);
-                choices_.push_back(k2);
-                choices_.push_back(j3);
-                choices_.push_back(k3);
+                MetaData record;
+                record.vIdx.push_back(j1);
+                record.vIdx.push_back(j2);
+                record.vIdx.push_back(j3);
+                record.cIdx.push_back(k1);
+                record.cIdx.push_back(k2);
+                record.cIdx.push_back(k3); 
+                log_.push_back(std::move(record));                           
               }
             }
           }
@@ -225,12 +263,14 @@ void SearchEngine::setDepthThreeChoices() {
               std::bitset<64> subset3(k3);
               if (subset3.count() <= half3) {
                 for (auto k1 = 0; k1 < data_->nCut(j1); ++k1) {
-                  choices_.push_back(j1);
-                  choices_.push_back(k1);
-                  choices_.push_back(j2);
-                  choices_.push_back(k2);
-                  choices_.push_back(j3);
-                  choices_.push_back(k3);
+                  MetaData record;
+                  record.vIdx.push_back(j1);
+                  record.vIdx.push_back(j2);
+                  record.vIdx.push_back(j3);
+                  record.cIdx.push_back(k1);
+                  record.cIdx.push_back(k2);
+                  record.cIdx.push_back(k3); 
+                  log_.push_back(std::move(record));           
                 }
               }
             }
@@ -258,12 +298,14 @@ void SearchEngine::setDepthThreeChoices() {
                 for (auto k3 = 0; k3 < max3; ++k3) {
                   std::bitset<64> subset3(k3);
                   if (subset3.count() <= half3) {
-                    choices_.push_back(j1);
-                    choices_.push_back(k1);
-                    choices_.push_back(j2);
-                    choices_.push_back(k2);
-                    choices_.push_back(j3);
-                    choices_.push_back(k3);
+                    MetaData record;
+                    record.vIdx.push_back(j1);
+                    record.vIdx.push_back(j2);
+                    record.vIdx.push_back(j3);
+                    record.cIdx.push_back(k1);
+                    record.cIdx.push_back(k2);
+                    record.cIdx.push_back(k3); 
+                    log_.push_back(std::move(record));
                   }
                 }
               }

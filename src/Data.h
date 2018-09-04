@@ -34,14 +34,17 @@ public:
   // Return the number of responses
   int nResp() const { return nResp_; }
 
-  // Return row i, column j of the response matrix
+  // Return the sum of (Resp | Act = 0)
+  double T0() const { return T0_; }
+  
+  // Return the ith component of the jth response vector 
   double resp(int i, int j) const { return resp_[i * nResp_ + j]; }
 
-  // Return row i, column j of the action matrix
+  // Return the ith componet of the jth action vector 
   int act(int i, int j) const { return act_[i * nAct_ + j]; } 
 
-  // Return row i, column j of the covariate matrix
-  int cvar(int i, int j) const { return cvar_[i * nVar_ + j]; } 
+  // Return the ith component of the jth covariate vector
+  int cvar(int i, int j) const { return cvar_[j * nSample_ + i]; }
 
   // Return the number of cuts for variable i
   int nCut(int i) const;
@@ -86,7 +89,9 @@ private:
   int nVar_ = 0;    // # of variables 
   int nAct_ = 0;    // # of different actions
   int nResp_ = 0;   // # of differnet responses 
+  double T0_ = 0.0; // Sum (Resp | Act = 0) 
 
+  
   std::vector<std::set<int>> uniqOrd_; // unique values of each ordinal variable
   std::vector<std::set<int>> uniqNom_; // unique values of each nominal variable 
   
@@ -99,7 +104,8 @@ private:
   // Action matrix A[nSample_][nAct_];
   std::vector<int> act_; 
 
-  // Covariate matrix X[nSample_][nCont_ + nOrd_ + nNom_]
+  // Covariate matrix X[nCont_ + nOrd_ + nNom_][nSample_]. The different storage
+  // layout is to faciliate the access pattern of the comprehensive search. 
   std::vector<int> cvar_;
 };
 
