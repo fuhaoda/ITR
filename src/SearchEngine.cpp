@@ -2,6 +2,8 @@
 #include <vector>
 #include <bitset>
 #include <algorithm>
+#include <cassert>
+#include <iomanip>
 #include "SearchEngine.h"
 
 namespace ITR {
@@ -24,11 +26,10 @@ void SearchEngine::run() {
   // TODO: EXTENSION NEEDED
   // The origianl code assumes that action and response are column vectors. Only
   // action[i][0] and response[i][0] are used for each row. 
-  //auto nChoice = choices_.size() / depth_ / 2;
   auto nChoice = log_.size();   
   auto nSample = data_->nSample();
   auto T0 = data_->T0();
-  auto scaling_factor = 1.0 / nSample; 
+  auto scaling_factor = 2.0 / nSample; 
 
   if (depth_ == 1) {
     for (auto i = 0; i < nChoice; ++i) {
@@ -110,6 +111,30 @@ void SearchEngine::run() {
     }
   }
 }
+
+void SearchEngine::report(int nTop) {
+  assert(nTop <= log_.size()); 
+
+  // Sort the logs based on comparing values in result
+  std::sort(log_.begin(), log_.end(),
+            [](MetaData &d1, MetaData &d2) {return d1.result > d2.result;});
+
+  int iter = 0; 
+  for (auto it = log_.begin(); it != log_.end(); ++it) {
+    std::cout << "Value is " << std::scientific << it->result
+              << ", obtained from\n";
+    for (auto d = 0; d < depth_; ++d) {
+      auto vIdx = it->vIdx[d];
+      auto cIdx = it->cIdx[d];
+      auto m = it->rank & (1 << (depth_ - 1 - d));
+      data_->cutInfo(vIdx, cIdx, m); 
+    }
+
+    if (iter++ >= nTop)
+      break;
+  }
+}
+
 
 void SearchEngine::setDepthOneChoices() {
   auto nCont = data_->nCont();

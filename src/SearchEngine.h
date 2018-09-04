@@ -14,6 +14,9 @@ public:
   
   // Run the comprehensive search
   void run(); 
+
+  // Report the best results
+  void report(int nTop); 
   
 private:
   int depth_;  // Depth of the search
@@ -29,7 +32,7 @@ private:
     int rank;              // Rank of the best value within the 2^(depth + 1)
                            // searches
   };
-
+  
   std::vector<MetaData> log_; // Search history 
 
   // This function discovers all the choices for depth one search

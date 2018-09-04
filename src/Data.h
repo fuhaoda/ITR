@@ -50,7 +50,12 @@ public:
   int nCut(int i) const;
 
   // Return if component i of variable j belongs to cut k
-  bool inCut(int i, int j, int k) const; 
+  bool inCut(int i, int j, int k) const;
+
+  // Print information about cut j for varible i with mask m
+  // For continuous or ordinal variable, m = 0 is < and m = 1 is >=
+  // For nominal variable, m = 0 is \in and m = 1 is not \in 
+  void cutInfo(int i, int j, bool m) const; 
   
 private:
   // This function loads the input file. It assumes that fields of the same type

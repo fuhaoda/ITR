@@ -1,4 +1,6 @@
 #include <sstream>
+#include <iostream>
+#include <iterator>
 #include "Data.h"
 #include "Covariate.h"
 
@@ -195,6 +197,26 @@ inline bool Data::inCut(int i, int j, int k) const {
   auto val = cvar_[j * nSample_ + i]; 
   return (j < nCont_ + nOrd_ ? val <= k : val & k);
 }
+
+void Data::cutInfo(int i, int j, bool m) const {
+  if (i < nCont_) {
+    std::cout << "  X" << i << (m ? " < " : " >= ") << j << "\n";
+  } else if (i < nCont_ + nOrd_) {
+    auto it = uniqOrd_[i].begin();
+    std::advance(it, j);     
+    std::cout << "  X" << i << (m ? " < " : " >= ") << *it << "\n";
+  } else {
+    std::cout << "  X" << i << (m ? " in " : " not in ") << "{";
+    int iter = 0;
+    for (auto const &v : uniqOrd_[i]) {
+      if (j & iter)
+        std::cout << v << ", ";
+      iter++;
+    }
+    std::cout << "}\n"; 
+  }
+}
+
 
 } // namespace ITR
 
