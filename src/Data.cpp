@@ -121,32 +121,41 @@ void Data::loadRawData(std::ifstream &infile,
 void Data::parseRawData(std::vector<std::vector<double>> &cont,
                         std::vector<std::vector<int>> &ord,
                         std::vector<std::vector<int>> &nom) {
+  // Set up T0
+  for (auto i = 0; i < nSample_; ++i) {
+    if (!act_[i * nAct_])
+      T0_ += resp_[i * nResp_];
+  }
+  
   // Parse continuous variables
   for (auto i = 0; i < nCont_; ++i)
-    convertToDeciles(cont[i]);
+    convertContToDeciles(cont[i]);
 
   // Parse ordinal variables
   for (auto i = 0; i < nOrd_; ++i)
-    convertToRanks(ord[i], uniqOrd_[i]);
+    convertOrdToRanks(ord[i], uniqOrd_[i]);
 
   // Parse nominal variables
   for (auto i = 0; i < nNom_; ++i)
-    convertToRanks(nom[i], uniqNom_[i]); 
+    convertNomToRanks(nom[i], uniqNom_[i]); 
 
-  // Write the parsed values into cvar_, where variables corresponding to the
-  // same sample are stored contiguously
+  // Write parsed values into cvar_, where samples corresponding to the same
+  // variable are stored contiguously. 
   cvar_.resize(nSample_ * nVar_);
 
-  int iter = 0;
-  for (auto i = 0; i < nSample_; ++i) {
-    for (auto j = 0; j < nCont_; ++j)
-      cvar_[iter++] = (int) cont[j][i];
+  for (auto i = 0; i < nCont_; ++i) {
+    for (auto j = 0; j < nSample_; ++j)
+      cvar_[i * nVar_ + j] = (int) cont[i][j];
+  }
 
-    for (auto j = 0; j < nOrd_; ++j)
-      cvar_[iter++] = ord[j][i];
+  for (auto i = 0; i < nOrd_; ++i) {
+    for (auto j = 0; j < nSample_; ++j)
+      cvar_[i * nVar_ + j] =  ord[i][j];
+  }
 
-    for (auto j = 0; j < nNom_; ++j)
-      cvar_[iter++] = nom[j][i];
+  for (auto i = 0; i < nNom_; ++i) {
+    for (auto j = 0; j < nSample_; ++j)
+      cvar_[i * nVar_ + j] = nom[i][j];
   }
 }
 
@@ -180,10 +189,10 @@ inline int Data::nCut(int i) const {
 }
 
 inline bool Data::inCut(int i, int j, int k) const {
-  // This function compares row i, column j of the variable matrix against cut k
+  // This function compares the ith component of variable j against cut k.
   // If column j is a continuous or ordinal variable, we simply compare the value
   // If column j is a nominal variable, we return the result of bitwise AND
-  auto val = cvar_[i * nVar_ + j];
+  auto val = cvar_[j * nSample_ + i]; 
   return (j < nCont_ + nOrd_ ? val <= k : val & k);
 }
 
