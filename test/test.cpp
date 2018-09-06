@@ -1,12 +1,17 @@
-#include <iostream>
-#include "ITR.h"
+#include <memory>
+#include "Data.h"
+#include "SearchEngine.h"
+#include "Covariate.h"
+#include "gtest/gtest.h"
 
-int main(int argc, char **argv) {
-  std::cout << "Hello from test\n"; 
-  
-  return 0;
+namespace {
+
+TEST(DataTest, ParseCSVHeader) {
+  std::unique_ptr<ITR::Data> data = std::make_unique<ITR::Data>("sample100.csv"); 
+  //ITR::Data *data = std::make_unique<ITR::Data>("sample100.csv"); 
 }
 
+} // namespace 
 
 #if 0
 

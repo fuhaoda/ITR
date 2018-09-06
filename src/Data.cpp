@@ -161,7 +161,7 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
   }
 }
 
-inline int Data::nCut(int i) const {
+int Data::nCut(int i) const {
   if (i < nCont_) {
     return 10; 
   } else if (i < nCont_ + nOrd_) {
@@ -190,7 +190,7 @@ inline int Data::nCut(int i) const {
   }
 }
 
-inline bool Data::inCut(int i, int j, int k) const {
+bool Data::inCut(int i, int j, int k) const {
   // This function compares the ith component of variable j against cut k.
   // If column j is a continuous or ordinal variable, we simply compare the value
   // If column j is a nominal variable, we return the result of bitwise AND
