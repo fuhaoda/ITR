@@ -7,7 +7,7 @@ int main(int argc, char **argv) {
   // Create an ITR instance. The constructor takes two arguments: the first one
   // is the path of the input data file, and the second one is the depth of the
   // search. 
-  ITR::ITR instance("TestSample_100.csv", 3); 
+  ITR::ITR instance("demo_input.csv", 3); 
 
   // Run the search with the specified depth
   instance.run();

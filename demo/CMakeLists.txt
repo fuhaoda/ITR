@@ -5,6 +5,6 @@ target_link_libraries(demo itr)
 add_custom_command(
   TARGET demo POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy
-  ${CMAKE_SOURCE_DIR}/demo/TestSample_100.csv
-  ${CMAKE_CURRENT_BINARY_DIR}/TestSample_100.csv
+  ${CMAKE_SOURCE_DIR}/demo/demo_input.csv
+  ${CMAKE_CURRENT_BINARY_DIR}/demo_input.csv
   )
