@@ -26,7 +26,7 @@ public:
   void generateResp(void(*func)(double *arr, int n)); 
   
   // Save the generated data into a csv file
-  void save(std::string ofname = std::string{"simData.csv"}) const;   
+  void save(std::string fname = std::string{"simData.csv"}) const;   
   
 private:
   int nSample_; // Number of samples to generate
