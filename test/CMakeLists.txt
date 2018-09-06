@@ -4,7 +4,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include
 target_link_libraries(test itr gtest_main)
 
 add_custom_command(
-  TARGET demo POST_BUILD
+  TARGET test POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy
   ${CMAKE_SOURCE_DIR}/test/sample100.csv
   ${CMAKE_CURRENT_BINARY_DIR}/sample100.csv
