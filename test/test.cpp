@@ -3,13 +3,55 @@
 #include "SearchEngine.h"
 #include "Covariate.h"
 #include "gtest/gtest.h"
+#include <iostream>
 
 namespace {
 
-TEST(DataTest, ParseCSVHeader) {
-  std::unique_ptr<ITR::Data> data = std::make_unique<ITR::Data>("sample100.csv"); 
-  //ITR::Data *data = std::make_unique<ITR::Data>("sample100.csv"); 
+TEST(CovariateCovertTest, Cont) {
+  std::vector<double> arr = {5.0, 1.0, 9.0, 3.0, 14.0, 9.0, 7.0};
+  double fct = 10.0 / arr.size();
+
+  std::vector<double> expect = {2.5, 0.5, 4.5, 1.5, 6.5, 5.5, 3.5}; 
+  ITR::convertContToDeciles(arr);
+
+  for (auto i = 0; i < arr.size(); ++i)
+    EXPECT_EQ(fct * expect[i], arr[i]) << "Values differ at index " << i;
+}  
+
+TEST(CovariateCovertTest, Ord) {
+  std::vector<int> arr = {1, 2, 3, 3, 5, 2, 9, 3, 1, 2};
+  std::set<int> uniq;
+  for (auto v : arr)
+    uniq.insert(v);
+
+  std::vector<int> expect = {0, 1, 2, 2, 3, 1, 4, 2, 0, 1};
+  ITR::convertOrdToRanks(arr, uniq);
+
+  for (auto i = 0; i < arr.size(); ++i)
+    EXPECT_EQ(expect[i], arr[i]) << "Values differ at index " << i; 
 }
+
+TEST(CovariateConvertTest, Nom) {
+  std::vector<int> arr = {3, 2, 7, 6, 6, 2}; 
+  std::set<int> uniq;
+  for (auto v : arr)
+    uniq.insert(v);
+  
+  std::vector<int> expect = {2, 1, 8, 4, 4, 1};
+  ITR::convertNomToBitMasks(arr, uniq);
+
+  for (auto i = 0; i < arr.size(); ++i)
+    EXPECT_EQ(expect[i], arr[i]) << "Values differ at index " << i; 
+}
+
+
+// TEST(DataTest, ParseCSVHeader) {
+//   std::unique_ptr<ITR::Data> data = std::make_unique<ITR::Data>("sample100.csv"); 
+//   //ITR::Data *data = std::make_unique<ITR::Data>("sample100.csv"); 
+// }
+
+
+
 
 } // namespace 
 

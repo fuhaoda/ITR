@@ -36,8 +36,7 @@ void convertContToDeciles(std::vector<double> &cont) {
   }
 }
 
-void convertOrdToRanks(std::vector<int> &ord,
-                       const std::set<int> &uniq) {
+void convertOrdToRanks(std::vector<int> &ord, const std::set<int> &uniq) {
   auto largest = *uniq.rbegin();
 
   // Create a reverse table
@@ -53,8 +52,7 @@ void convertOrdToRanks(std::vector<int> &ord,
     v = reverse_table[v]; 
 }
 
-void convertNomToRanks(std::vector<int> &ord,
-                       const std::set<int> &uniq) {
+void convertNomToBitMasks(std::vector<int> &ord, const std::set<int> &uniq) {
   // Create a reverse map
   std::map<int, int> reverse_map;
 

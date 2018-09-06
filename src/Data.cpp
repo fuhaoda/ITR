@@ -139,7 +139,7 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
 
   // Parse nominal variables
   for (auto i = 0; i < nNom_; ++i)
-    convertNomToRanks(nom[i], uniqNom_[i]); 
+    convertNomToBitMasks(nom[i], uniqNom_[i]); 
 
   // Write parsed values into cvar_, where samples corresponding to the same
   // variable are stored contiguously. 
