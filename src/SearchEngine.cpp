@@ -9,6 +9,9 @@
 namespace ITR {
 
 SearchEngine::SearchEngine(int depth, const Data *data) {
+  if (depth != 1 && depth != 2 && depth != 3)
+    throw "Invalid search depth!"; 
+
   depth_ = depth;
   data_ = data;
 
