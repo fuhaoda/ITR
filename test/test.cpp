@@ -1,9 +1,9 @@
 #include <memory>
+#include <iostream>
 #include "Data.h"
 #include "SearchEngine.h"
 #include "Covariate.h"
 #include "gtest/gtest.h"
-#include <iostream>
 
 namespace {
 
@@ -44,11 +44,35 @@ TEST(CovariateConvertTest, Nom) {
     EXPECT_EQ(expect[i], arr[i]) << "Values differ at index " << i; 
 }
 
+TEST(DataTest, Load) {
+  ITR::Data data("sample100.csv");  
+  std::vector<int> nCut = {10, 10, 10, 5, 5, 5, 5, 5, 5}; 
+  const double T0 = 2841.77937;
+  const double a_r28_c0 = 0;
+  const double y_r11_c0 = 12.4483;
+  
+  EXPECT_EQ(100, data.nSample());
+  EXPECT_EQ(3, data.nCont());
+  EXPECT_EQ(3, data.nOrd());
+  EXPECT_EQ(3, data.nNom());
+  EXPECT_EQ(1, data.nAct());
+  EXPECT_EQ(1, data.nResp());
+  EXPECT_EQ(T0, data.T0()); 
+  EXPECT_EQ(a_r28_c0, data.act(28, 0));
+  EXPECT_EQ(y_r11_c0, data.resp(11, 0)); 
 
-// TEST(DataTest, ParseCSVHeader) {
-//   std::unique_ptr<ITR::Data> data = std::make_unique<ITR::Data>("sample100.csv"); 
-//   //ITR::Data *data = std::make_unique<ITR::Data>("sample100.csv"); 
-// }
+  for (auto i = 0; i < 9; ++i)
+    EXPECT_EQ(nCut[i], data.nCut(i)) << "Values differ at index " << i;
+
+  // Check which cuts does each component of continuous variable #1 fall in
+  std::vector<int> cidx = {12, 37, 67, 16, 92, 28, 88, 71, 74, 1};
+  for (auto i = 0; i < 10; ++i)
+    EXPECT_EQ(true, data.inCut(cidx[i], 0, i)) << "Values differ at index " << i; 
+  
+  
+}
+
+// Depth 3 has 86131 searches 
 
 
 
