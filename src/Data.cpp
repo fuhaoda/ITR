@@ -1,12 +1,19 @@
 #include <sstream>
 #include <iostream>
 #include <iterator>
+#include <algorithm>
+#include <cstring>
+#include <sys/stat.h>
 #include "Data.h"
 #include "Covariate.h"
 
 namespace ITR {
 
 Data::Data(std::string input) {
+  struct stat buffer;
+  if (stat(input.c_str(), &buffer) != 0)
+    throw "Input file does not exist!";
+  
   // TODO:
   // Switch different load function based on the file format 
   loadCSV(input); 
@@ -49,12 +56,15 @@ void Data::parseCSVHeader(std::ifstream &infile) {
 
   while (ss.good()) {
     getline(ss, field, ',');
+
+    // Convert field to all CAPS     
+    std::transform(field.begin(), field.end(), field.begin(), ::toupper); 
     
-    if (field.find("cont") != std::string::npos) {
+    if (field.find("CONT") != std::string::npos) {
       nCont_++; 
-    } else if (field.find("ord") != std::string::npos) {
+    } else if (field.find("ORD") != std::string::npos) {
       nOrd_++;
-    } else if (field.find("nom") != std::string::npos) {
+    } else if (field.find("NOM") != std::string::npos) {
       nNom_++; 
     } else if (field.find("A") != std::string::npos) {
       nAct_++;
@@ -146,18 +156,20 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
   cvar_.resize(nSample_ * nVar_);
 
   for (auto i = 0; i < nCont_; ++i) {
-    for (auto j = 0; j < nSample_; ++j)
-      cvar_[i * nVar_ + j] = (int) cont[i][j];
+    for (auto j = 0; j < nSample_; ++j) {
+      cvar_[i * nSample_ + j] = (int) cont[i][j]; 
+    }
   }
 
+  auto v = cvar_.data() + nCont_ * nSample_; 
   for (auto i = 0; i < nOrd_; ++i) {
-    for (auto j = 0; j < nSample_; ++j)
-      cvar_[i * nVar_ + j] =  ord[i][j];
+    memcpy(v, ord[i].data(), sizeof(int) * nSample_);
+    v += nSample_;
   }
 
   for (auto i = 0; i < nNom_; ++i) {
-    for (auto j = 0; j < nSample_; ++j)
-      cvar_[i * nVar_ + j] = nom[i][j];
+    memcpy(v, nom[i].data(), sizeof(int) * nSample_);
+    v += nSample_; 
   }
 }
 
@@ -165,6 +177,7 @@ int Data::nCut(int i) const {
   if (i < nCont_) {
     return 10; 
   } else if (i < nCont_ + nOrd_) {
+    i -= nCont_; 
     return uniqOrd_[i].size();
   } else {
     // The number of cuts for a nominal variable is the number of subsets that
@@ -185,7 +198,8 @@ int Data::nCut(int i) const {
     // If iterator 'iter' is a valid subset (cut), one can decide if component
     // j of the nominal variable belongs to the subset by performing bitwise
     // AND as component j saves the rank of the original value in the unique
-    // set. 
+    // set.
+    i -= (nCont_ + nOrd_); 
     return uniqNom_[i].size();
   }
 }
