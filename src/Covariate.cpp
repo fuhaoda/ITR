@@ -1,5 +1,6 @@
 #include <numeric>
-#include <map> 
+#include <map>
+#include <algorithm>
 #include "Covariate.h"
 
 namespace ITR {
