@@ -2,7 +2,6 @@
 #include <vector>
 #include <bitset>
 #include <algorithm>
-#include <cassert>
 #include <iomanip>
 #include "SearchEngine.h"
 
@@ -116,7 +115,9 @@ void SearchEngine::run() {
 }
 
 void SearchEngine::report(int nTop) {
-  assert(nTop <= log_.size()); 
+  // Cap nTop 
+  if (nTop > log_.size())
+    nTop = log_.size(); 
 
   // Sort the logs based on comparing values in result
   std::sort(log_.begin(), log_.end(),
