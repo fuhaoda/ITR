@@ -14,48 +14,48 @@ public:
   Data(std::string input);
 
   // Return the number of sample size 
-  int nSample() const { return nSample_; } 
+  size_t nSample() const { return nSample_; } 
 
   // Return the number of continuous covariates
-  int nCont() const { return nCont_; }
+  size_t nCont() const { return nCont_; }
 
   // Return the number of ordinal covariates
-  int nOrd() const { return nOrd_; }
+  size_t nOrd() const { return nOrd_; }
 
   // Return the number of nominal covariates
-  int nNom() const { return nNom_; }
+  size_t nNom() const { return nNom_; }
 
   // Return the total number of covariates
-  int nVar() const { return nVar_; }
+  size_t nVar() const { return nVar_; }
 
   // Return the number of actions
-  int nAct() const { return nAct_; }
+  size_t nAct() const { return nAct_; }
 
   // Return the number of responses
-  int nResp() const { return nResp_; }
+  size_t nResp() const { return nResp_; }
 
   // Return the sum of (Resp | Act = 0)
   double T0() const { return T0_; }
   
   // Return the ith component of the jth response vector 
-  double resp(int i, int j) const { return resp_[i * nResp_ + j]; }
+  double resp(size_t i, size_t j) const { return resp_[i * nResp_ + j]; }
 
   // Return the ith componet of the jth action vector 
-  int act(int i, int j) const { return act_[i * nAct_ + j]; } 
+  int act(size_t i, size_t j) const { return act_[i * nAct_ + j]; } 
 
   // Return the ith component of the jth covariate vector
-  int cvar(int i, int j) const { return cvar_[j * nSample_ + i]; }
+  int cvar(size_t i, size_t j) const { return cvar_[j * nSample_ + i]; }
 
   // Return the number of cuts for variable i
-  int nCut(int i) const;
+  size_t nCut(size_t i) const;
 
   // Return if component i of variable j belongs to cut k
-  bool inCut(int i, int j, int k) const;
+  bool inCut(size_t i, size_t j, size_t k) const;
 
   // Print information about cut j for varible i with mask m
   // For continuous or ordinal variable, m = 0 is < and m = 1 is >=
   // For nominal variable, m = 0 is \in and m = 1 is not \in 
-  void cutInfo(int i, int j, bool m) const; 
+  void cutInfo(size_t i, size_t j, bool m) const; 
   
 private:
   // This function loads the input file. It assumes that fields of the same type
@@ -87,18 +87,18 @@ private:
                     std::vector<std::vector<int>> &ord,
                     std::vector<std::vector<int>> &nom); 
 
-  int nSample_ = 0; // Sample size
-  int nCont_ = 0;   // # of continuous variables
-  int nOrd_ = 0;    // # of ordinal variables
-  int nNom_ = 0;    // # of nominal variables
-  int nVar_ = 0;    // # of variables 
-  int nAct_ = 0;    // # of different actions
-  int nResp_ = 0;   // # of differnet responses 
+  size_t nSample_ = 0; // Sample size
+  size_t nCont_ = 0;   // # of continuous variables
+  size_t nOrd_ = 0;    // # of ordinal variables
+  size_t nNom_ = 0;    // # of nominal variables
+  size_t nVar_ = 0;    // # of variables 
+  size_t nAct_ = 0;    // # of different actions
+  size_t nResp_ = 0;   // # of differnet responses 
   double T0_ = 0.0; // Sum (Resp | Act = 0) 
 
   
   std::vector<std::set<int>> uniqOrd_; // unique values of each ordinal variable
-  std::vector<std::set<int>> uniqNom_; // unique values of each nominal variable 
+  std::vector<std::set<int>> uniqNom_; // unique values of each nominal variable
   
   // Array of subject ID
   std::vector<int> id_; 

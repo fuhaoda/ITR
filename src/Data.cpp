@@ -1,4 +1,4 @@
-#include <sstream>
+#include <sstream> 
 #include <iostream>
 #include <iterator>
 #include <algorithm>
@@ -95,13 +95,13 @@ void Data::loadRawData(std::ifstream &infile,
     id_.push_back(stoi(field));
 
     // Read continuous variables
-    for (auto i = 0; i < nCont_; ++i) {
+    for (size_t i = 0; i < nCont_; ++i) {
       getline(ss, field, ',');
       cont[i].push_back(stod(field)); 
     }
 
     // Read ordinal variables
-    for (auto i = 0; i < nOrd_; ++i) {
+    for (size_t i = 0; i < nOrd_; ++i) {
       getline(ss, field, ',');
       auto val = stoi(field);
       ord[i].push_back(val);
@@ -109,7 +109,7 @@ void Data::loadRawData(std::ifstream &infile,
     }
 
     // Read nominal variables
-    for (auto i = 0; i < nNom_; ++i) {
+    for (size_t i = 0; i < nNom_; ++i) {
       getline(ss, field, ',');
       auto val = stoi(field);
       nom[i].push_back(val);
@@ -118,12 +118,12 @@ void Data::loadRawData(std::ifstream &infile,
 
     // Read actions
     // TODO: handle generic case other than 0-1 boolean 
-    for (auto i = 0; i < nAct_; ++i) {
+    for (size_t i = 0; i < nAct_; ++i) {
       getline(ss, field, ',');
       act_.push_back(stoi(field));
     }
     
-    for (auto i = 0; i < nResp_; ++i) {
+    for (size_t i = 0; i < nResp_; ++i) {
       getline(ss, field, ',');
       resp_.push_back(stod(field));
     }
@@ -134,46 +134,46 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
                         std::vector<std::vector<int>> &ord,
                         std::vector<std::vector<int>> &nom) {
   // Set up T0
-  for (auto i = 0; i < nSample_; ++i) {
+  for (size_t i = 0; i < nSample_; ++i) {
     if (!act_[i * nAct_])
       T0_ += resp_[i * nResp_];
   }
   
   // Parse continuous variables
-  for (auto i = 0; i < nCont_; ++i)
+  for (size_t i = 0; i < nCont_; ++i)
     convertContToDeciles(cont[i]);
 
   // Parse ordinal variables
-  for (auto i = 0; i < nOrd_; ++i)
+  for (size_t i = 0; i < nOrd_; ++i)
     convertOrdToRanks(ord[i], uniqOrd_[i]);
 
   // Parse nominal variables
-  for (auto i = 0; i < nNom_; ++i)
+  for (size_t i = 0; i < nNom_; ++i)
     convertNomToBitMasks(nom[i], uniqNom_[i]); 
 
   // Write parsed values into cvar_, where samples corresponding to the same
   // variable are stored contiguously. 
   cvar_.resize(nSample_ * nVar_);
 
-  for (auto i = 0; i < nCont_; ++i) {
-    for (auto j = 0; j < nSample_; ++j) {
+  for (size_t i = 0; i < nCont_; ++i) {
+    for (size_t j = 0; j < nSample_; ++j) {
       cvar_[i * nSample_ + j] = (int) cont[i][j]; 
     }
   }
 
   auto v = cvar_.data() + nCont_ * nSample_; 
-  for (auto i = 0; i < nOrd_; ++i) {
+  for (size_t i = 0; i < nOrd_; ++i) {
     memcpy(v, ord[i].data(), sizeof(int) * nSample_);
     v += nSample_;
   }
 
-  for (auto i = 0; i < nNom_; ++i) {
+  for (size_t i = 0; i < nNom_; ++i) {
     memcpy(v, nom[i].data(), sizeof(int) * nSample_);
     v += nSample_; 
   }
 }
 
-int Data::nCut(int i) const {
+size_t Data::nCut(size_t i) const {
   if (i < nCont_) {
     return 10; 
   } else if (i < nCont_ + nOrd_) {
@@ -204,15 +204,15 @@ int Data::nCut(int i) const {
   }
 }
 
-bool Data::inCut(int i, int j, int k) const {
+bool Data::inCut(size_t i, size_t j, size_t k) const {
   // This function compares the ith component of variable j against cut k.
   // If column j is a continuous or ordinal variable, we simply compare the value
   // If column j is a nominal variable, we return the result of bitwise AND
-  auto val = cvar_[j * nSample_ + i]; 
+  size_t val = cvar_[j * nSample_ + i]; 
   return (j < nCont_ + nOrd_ ? val <= k : val & k);
 }
 
-void Data::cutInfo(int i, int j, bool m) const {
+void Data::cutInfo(size_t i, size_t j, bool m) const {
   if (i < nCont_) {
     std::cout << "  X" << i << (m ? " >= " : " < ") << j << "\n";
   } else if (i < nCont_ + nOrd_) {

@@ -28,7 +28,7 @@ void convertContToDeciles(std::vector<double> &cont) {
   auto sorted = sort_indices(cont); 
   
   // Replace the value of the continuous variable with the decile
-  for (auto i = 0; i < nSample; ++i) {
+  for (size_t i = 0; i < nSample; ++i) {
     // The jth component of the variable is in the ith sorted position
     auto j = sorted[i];
 

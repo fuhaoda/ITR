@@ -14,7 +14,7 @@ public:
   void run() const;
 
   // Display the top n search results
-  void report(int nTop = 1) const; 
+  void report(size_t nTop = 1) const; 
 };
 
 } // namespace ITR

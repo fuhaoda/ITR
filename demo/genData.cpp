@@ -5,26 +5,26 @@
 
 // Default values
 unsigned seed = 0;
-int nSample = 10; 
-int nCont = 1;
-int nOrd = 1;
-int nNom = 1;
-int nAct = 1;
-int nResp = 1;
+size_t nSample = 10; 
+size_t nCont = 1;
+size_t nOrd = 1;
+size_t nNom = 1;
+size_t nAct = 1;
+size_t nResp = 1;
 
 // By default, double values are drawn uniformly from [0, 1], and integer values
 // are also drawn uniformly from [0, 1]. 
 std::default_random_engine engine;
 
-void genDouble(double *arr, int n) {
+void genDouble(double *arr, size_t n) {
   std::uniform_real_distribution<> dist{0.0, 1.0};
-  for (auto i = 0; i < n; ++i)
+  for (size_t i = 0; i < n; ++i)
     arr[i] = dist(engine);
 }
 
-void genInt(int *arr, int n) {
+void genInt(int *arr, size_t n) {
   std::uniform_int_distribution<> dist{0, 1};
-  for (auto i = 0; i < n; ++i)
+  for (size_t i = 0; i < n; ++i)
     arr[i] = dist(engine);
 }
 

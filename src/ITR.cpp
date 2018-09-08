@@ -26,7 +26,7 @@ void ITR::run() const {
 } 
 
 
-void ITR::report(int nTop) const {
+void ITR::report(size_t nTop) const {
   std::cout << "Best " << nTop << " results: ...\n";
   engine->report(nTop); 
 }

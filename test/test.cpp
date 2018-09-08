@@ -14,7 +14,7 @@ TEST(CovariateCovertTest, Cont) {
   std::vector<double> expect = {2.5, 0.5, 4.5, 1.5, 6.5, 5.5, 3.5}; 
   ITR::convertContToDeciles(arr);
 
-  for (auto i = 0; i < arr.size(); ++i)
+  for (size_t i = 0; i < arr.size(); ++i)
     EXPECT_EQ(fct * expect[i], arr[i]) << "Values differ at index " << i;
 }  
 
@@ -27,7 +27,7 @@ TEST(CovariateCovertTest, Ord) {
   std::vector<int> expect = {0, 1, 2, 2, 3, 1, 4, 2, 0, 1};
   ITR::convertOrdToRanks(arr, uniq);
 
-  for (auto i = 0; i < arr.size(); ++i)
+  for (size_t i = 0; i < arr.size(); ++i)
     EXPECT_EQ(expect[i], arr[i]) << "Values differ at index " << i; 
 }
 
@@ -40,7 +40,7 @@ TEST(CovariateConvertTest, Nom) {
   std::vector<int> expect = {2, 1, 8, 4, 4, 1};
   ITR::convertNomToBitMasks(arr, uniq);
 
-  for (auto i = 0; i < arr.size(); ++i)
+  for (size_t i = 0; i < arr.size(); ++i)
     EXPECT_EQ(expect[i], arr[i]) << "Values differ at index " << i; 
 }
 
@@ -61,20 +61,14 @@ TEST(DataTest, Load) {
   EXPECT_EQ(a_r28_c0, data.act(28, 0));
   EXPECT_EQ(y_r11_c0, data.resp(11, 0)); 
 
-  for (auto i = 0; i < 9; ++i)
+  for (size_t i = 0; i < nCut.size(); ++i)
     EXPECT_EQ(nCut[i], data.nCut(i)) << "Values differ at index " << i;
 
   // Check which cuts does each component of continuous variable #1 fall in
   std::vector<int> cidx = {12, 37, 67, 16, 92, 28, 88, 71, 74, 1};
   for (auto i = 0; i < 10; ++i)
     EXPECT_EQ(true, data.inCut(cidx[i], 0, i)) << "Values differ at index " << i; 
-  
-  
 }
-
-// TODO: add test for SearchEngine
-// Depth 3 has 86131 searches 
-
 
 } // namespace 
 
