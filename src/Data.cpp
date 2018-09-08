@@ -214,20 +214,22 @@ bool Data::inCut(int i, int j, int k) const {
 
 void Data::cutInfo(int i, int j, bool m) const {
   if (i < nCont_) {
-    std::cout << "  X" << i << (m ? " < " : " >= ") << j << "\n";
+    std::cout << "  X" << i << (m ? " >= " : " < ") << j << "\n";
   } else if (i < nCont_ + nOrd_) {
+    i -= nCont_; 
     auto it = uniqOrd_[i].begin();
     std::advance(it, j);     
-    std::cout << "  X" << i << (m ? " < " : " >= ") << *it << "\n";
+    std::cout << "  X" << i << (m ? " >= " : " < ") << *it << "\n";
   } else {
-    std::cout << "  X" << i << (m ? " in " : " not in ") << "{";
+    std::cout << "  X" << i << (m ? " not in " : " in ") << "{";
+    i -= nCont_ + nOrd_; 
     int iter = 0;
     for (auto const &v : uniqOrd_[i]) {
       if (j & iter)
         std::cout << v << ", ";
       iter++;
     }
-    std::cout << "}\n"; 
+    std::cout << "\b\b}\n"; 
   }
 }
 
