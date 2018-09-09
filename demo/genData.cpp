@@ -88,14 +88,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  // Terminate the program if any value becomes invalid
-  if (nSample < 0 || nCont < 0 || nOrd < 0 || nNom < 0 ||
-      nAct < 0 || nResp < 0) {
-    fprintf(stderr,
-            "Usage ERROR: command arguments must take positive values\n");
-    return -1; 
-  }
-
   // Update the seed of the engine
   engine = std::default_random_engine{seed}; 
 
