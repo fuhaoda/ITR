@@ -11,8 +11,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS_DEBUG "-Wall -O0 -g")
-set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3")
+set(CMAKE_CXX_FLAGS_DEBUG "-Wall -O0 -g -pthread")
+set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O3 -pthread")
 
 add_subdirectory(src)
 add_subdirectory(include)

@@ -43,6 +43,20 @@ private:
 
   // This function discovers all the choices for depth three search
   void setDepthThreeChoices();
+  
+  // This funciton is the worker function for depth one search
+  void runDepthOneSearch(size_t tid, unsigned nThreads);
+
+  // This function is the worker function for depth two search
+  void runDepthTwoSearch(size_t tid, unsigned nThreads);
+
+  // This function is the worker function for depth three search
+  void runDepthThreeSearch(size_t i, unsigned nThreads);
+
+  // This is a helper function that determines the range of searches performed
+  // by each worker.
+  void setSearchRange(size_t tid, unsigned nThreads,
+                      size_t &firstSearchID, size_t &lastSearchID);   
 }; 
 
 } // namespace ITR

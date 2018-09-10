@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <chrono>
 #include <iomanip>
+#include <thread> 
 #include "SearchEngine.h"
 
 namespace ITR {
@@ -29,99 +30,34 @@ void SearchEngine::run() {
   // TODO: EXTENSION NEEDED
   // The origianl code assumes that action and response are column vectors. Only
   // action[i][0] and response[i][0] are used for each row.
+
+  // Get number of cores
+  unsigned nCores = std::thread::hardware_concurrency();
+  std::vector<std::thread> threads(nCores);
+
   using namespace std::chrono;   
   auto t1 = high_resolution_clock::now();
-  
-  auto nChoice = log_.size();   
-  auto nSample = data_->nSample();
-  auto T0 = data_->T0();
-  auto scaling_factor = 2.0 / nSample; 
 
   if (depth_ == 1) {
-    for (size_t i = 0; i < nChoice; ++i) {
-      double v[4] = {0.0};
-      auto vIdx = log_[i].vIdx[0];
-      auto cIdx = log_[i].cIdx[0]; 
-      for (size_t j = 0; j < nSample; ++j) {
-        auto m = data_->inCut(j, vIdx, cIdx);
-        auto act = data_->act(j, 0);
-        auto resp = data_->resp(j, 0);
-        v[2 * m + act] += resp;
-      }
-
-      v[0] = v[1] - v[0];
-      v[1] = v[3] - v[2];
-           
-      if (v[0] < v[1]) {
-        log_[i].result = (v[0] + T0) * scaling_factor;
-        log_[i].rank = 0;
-      } else {
-        log_[i].result = (v[1] + T0) * scaling_factor;
-        log_[i].rank = 1;
-      }
-    }  
+    for (size_t i = 0; i < nCores; ++i)
+      threads[i] = std::thread(&SearchEngine::runDepthOneSearch, this, i, nCores);
   } else if (depth_ == 2) {
-    for (size_t i = 0; i < nChoice; ++i) {
-      double v[8] = {0.0};
-      auto vIdx1 = log_[i].vIdx[0];
-      auto vIdx2 = log_[i].vIdx[1];
-      auto cIdx1 = log_[i].cIdx[0];
-      auto cIdx2 = log_[i].cIdx[1]; 
-      for (size_t j = 0; j < nSample; ++j) {
-        auto m1 = data_->inCut(j, vIdx1, cIdx1);
-        auto m2 = data_->inCut(j, vIdx2, cIdx2);
-        auto act = data_->act(j, 0);
-        auto resp = data_->resp(j, 0);
-        v[4 * m1 + 2 * m2 + act] += resp;
-      }
-
-      v[0] = v[1] - v[0];
-      v[1] = v[3] - v[2];
-      v[2] = v[5] - v[4];
-      v[3] = v[7] - v[6];
-
-      const auto ptr = std::max_element(v, v + 4);
-      log_[i].result = (*ptr + T0) * scaling_factor;
-      log_[i].rank = ptr - v; 
-    }
-  } else { // depth_ == 3
-    for (size_t i = 0; i < nChoice; ++i) {
-      double v[16] = {0.0};
-      auto vIdx1 = log_[i].vIdx[0];
-      auto vIdx2 = log_[i].vIdx[1];
-      auto vIdx3 = log_[i].vIdx[2];
-      auto cIdx1 = log_[i].cIdx[0];
-      auto cIdx2 = log_[i].cIdx[1];
-      auto cIdx3 = log_[i].cIdx[2];
-      for (size_t j = 0; j < nSample; ++j) {
-        auto m1 = data_->inCut(j, vIdx1, cIdx1);
-        auto m2 = data_->inCut(j, vIdx2, cIdx2);
-        auto m3 = data_->inCut(j, vIdx3, cIdx3);
-        auto act = data_->act(j, 0);
-        auto resp = data_->resp(j, 0);
-        v[8 * m1 + 4 * m2 + 2 * m3 + act] += resp;
-      }
-
-      v[0] = v[1] - v[0];
-      v[1] = v[3] - v[2];
-      v[2] = v[5] - v[4];
-      v[3] = v[7] - v[6];
-      v[4] = v[9] - v[8];
-      v[5] = v[11] - v[10];
-      v[6] = v[13] - v[12];
-      v[7] = v[15] - v[14];
-
-      const auto ptr = std::max_element(v, v + 8);
-      log_[i].result = (*ptr + T0) * scaling_factor;
-      log_[i].rank = ptr - v; 
-    }
+    for (size_t i = 0; i < nCores; ++i)
+      threads[i] = std::thread(&SearchEngine::runDepthTwoSearch, this, i, nCores);
+  } else {
+    for (size_t i = 0; i < nCores; ++i)
+      threads[i] = std::thread(&SearchEngine::runDepthThreeSearch, this, i, nCores);
   }
+
+  for (auto &th : threads)
+    th.join();
 
   auto t2 = high_resolution_clock::now();
   auto elapsed = duration_cast<duration<double>>(t2 - t1); 
 
   std::cout << "Completed in " << std::scientific
-            << elapsed.count() << " seconds\n"; 
+            << elapsed.count() << " seconds using "
+            << nCores << " logical cores\n"; 
 }
 
 void SearchEngine::report(size_t nTop) {
@@ -355,5 +291,131 @@ void SearchEngine::setDepthThreeChoices() {
     }
   }  
 }
+
+void SearchEngine::setSearchRange(size_t tid, unsigned nThreads,
+                                  size_t &firstSearchID,
+                                  size_t &lastSearchID) {
+  auto nChoice = log_.size();
+  auto choicePerCore = nChoice / nThreads;
+  auto remainder = nChoice % nThreads;
+
+  if (tid < remainder) {
+    firstSearchID = (choicePerCore + 1) * tid;
+    lastSearchID = firstSearchID + choicePerCore + 1;
+  } else {
+    firstSearchID = choicePerCore * tid + remainder;
+    lastSearchID = firstSearchID + choicePerCore;
+  }    
+}
+
+void SearchEngine::runDepthOneSearch(size_t tid, unsigned nThreads) {
+  auto nSample = data_->nSample(); 
+  auto T0 = data_->T0();
+  auto scaling_factor = 2.0 / nSample;
+
+  size_t firstSearchID{0}, lastSearchID{0};
+  setSearchRange(tid, nThreads, firstSearchID, lastSearchID);
+
+  for (size_t i = firstSearchID; i < lastSearchID; ++i) {
+    double v[4] = {0.0};
+    auto vIdx = log_[i].vIdx[0];
+    auto cIdx = log_[i].cIdx[0]; 
+    for (size_t j = 0; j < nSample; ++j) {
+      auto m = data_->inCut(j, vIdx, cIdx);
+      auto act = data_->act(j, 0);
+      auto resp = data_->resp(j, 0);
+      v[2 * m + act] += resp;
+    }
+    
+    v[0] = v[1] - v[0];
+    v[1] = v[3] - v[2];
+    
+    if (v[0] < v[1]) {
+      log_[i].result = (v[0] + T0) * scaling_factor;
+      log_[i].rank = 0;
+    } else {
+      log_[i].result = (v[1] + T0) * scaling_factor;
+      log_[i].rank = 1;
+    }
+  }    
+}
+
+void SearchEngine::runDepthTwoSearch(size_t tid, unsigned nThreads) {
+  auto nSample = data_->nSample(); 
+  auto T0 = data_->T0();
+  auto scaling_factor = 2.0 / nSample;
+
+  size_t firstSearchID{0}, lastSearchID{0};
+  setSearchRange(tid, nThreads, firstSearchID, lastSearchID);
+
+  for (size_t i = firstSearchID; i < lastSearchID; ++i) {
+    double v[8] = {0.0};
+    auto vIdx1 = log_[i].vIdx[0];
+    auto vIdx2 = log_[i].vIdx[1];
+    auto cIdx1 = log_[i].cIdx[0];
+    auto cIdx2 = log_[i].cIdx[1]; 
+    for (size_t j = 0; j < nSample; ++j) {
+      auto m1 = data_->inCut(j, vIdx1, cIdx1);
+      auto m2 = data_->inCut(j, vIdx2, cIdx2);
+      auto act = data_->act(j, 0);
+      auto resp = data_->resp(j, 0);
+      v[4 * m1 + 2 * m2 + act] += resp;
+    }
+
+    v[0] = v[1] - v[0];
+    v[1] = v[3] - v[2];
+    v[2] = v[5] - v[4];
+    v[3] = v[7] - v[6];
+    
+    const auto ptr = std::max_element(v, v + 4);
+    log_[i].result = (*ptr + T0) * scaling_factor;
+    log_[i].rank = ptr - v; 
+  }  
+}
+
+void SearchEngine::runDepthThreeSearch(size_t tid, unsigned nThreads) {
+  auto nSample = data_->nSample(); 
+  auto T0 = data_->T0();
+  auto scaling_factor = 2.0 / nSample;
+
+  size_t firstSearchID{0}, lastSearchID{0};
+  setSearchRange(tid, nThreads, firstSearchID, lastSearchID); 
+
+  for (size_t i = firstSearchID; i < lastSearchID; ++i) {
+    double v[16] = {0.0};
+    auto vIdx1 = log_[i].vIdx[0];
+    auto vIdx2 = log_[i].vIdx[1];
+    auto vIdx3 = log_[i].vIdx[2];
+    auto cIdx1 = log_[i].cIdx[0];
+    auto cIdx2 = log_[i].cIdx[1];
+    auto cIdx3 = log_[i].cIdx[2];
+    for (size_t j = 0; j < nSample; ++j) {
+      auto m1 = data_->inCut(j, vIdx1, cIdx1);
+      auto m2 = data_->inCut(j, vIdx2, cIdx2);
+      auto m3 = data_->inCut(j, vIdx3, cIdx3);
+      auto act = data_->act(j, 0);
+      auto resp = data_->resp(j, 0);
+      v[8 * m1 + 4 * m2 + 2 * m3 + act] += resp;
+    }
+    
+    v[0] = v[1] - v[0];
+    v[1] = v[3] - v[2];
+    v[2] = v[5] - v[4];
+    v[3] = v[7] - v[6];
+    v[4] = v[9] - v[8];
+    v[5] = v[11] - v[10];
+    v[6] = v[13] - v[12];
+    v[7] = v[15] - v[14];
+    
+    const auto ptr = std::max_element(v, v + 8);
+    log_[i].result = (*ptr + T0) * scaling_factor;
+    log_[i].rank = ptr - v; 
+  }  
+}
+
+
+
+
+
 
 } // namespace ITR
