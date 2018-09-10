@@ -157,7 +157,7 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
 
   for (size_t i = 0; i < nCont_; ++i) {
     for (size_t j = 0; j < nSample_; ++j) {
-      cvar_[i * nSample_ + j] = (int) cont[i][j]; 
+      cvar_[i * nSample_ + j] = static_cast<int>(cont[i][j]); 
     }
   }
 

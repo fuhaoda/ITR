@@ -1,6 +1,7 @@
 #include <numeric>
 #include <map>
 #include <algorithm>
+#include <utility>
 #include "Covariate.h"
 
 namespace ITR {
@@ -38,19 +39,16 @@ void convertContToDeciles(std::vector<double> &cont) {
 }
 
 void convertOrdToRanks(std::vector<int> &ord, const std::set<int> &uniq) {
-  auto largest = *uniq.rbegin();
+  // Create a reverse map
+  std::map<int, int> reverse_map;
 
-  // Create a reverse table
-  // reverse_table[i] = j means value i is rank j, where the rank starts from 0. 
-  std::vector<int> reverse_table(largest + 1);
-  
-  int rank = 0;
-  for (auto it = uniq.begin(); it != uniq.end(); ++it) 
-    reverse_table[*it] = rank++;
+  int rank = 0; 
+  for (const auto &v : uniq)
+    reverse_map.insert(std::make_pair(v, rank++));
 
   // Replace the ordinal values with the corresponding ranks in the unique set
   for (auto &v : ord)
-    v = reverse_table[v]; 
+    v = reverse_map[v]; 
 }
 
 void convertNomToBitMasks(std::vector<int> &ord, const std::set<int> &uniq) {
@@ -58,8 +56,8 @@ void convertNomToBitMasks(std::vector<int> &ord, const std::set<int> &uniq) {
   std::map<int, int> reverse_map;
 
   int rank = 0; 
-  for (auto &v : uniq)
-    reverse_map[v] = rank++;
+  for (const auto &v : uniq)
+    reverse_map.insert(std::make_pair(v, rank++)); 
 
   // Replace the nominal values with the corresponding ranks in the unique set
   for (auto &v : ord) 
