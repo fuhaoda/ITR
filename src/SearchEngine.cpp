@@ -2,6 +2,7 @@
 #include <vector>
 #include <bitset>
 #include <algorithm>
+#include <chrono>
 #include <iomanip>
 #include "SearchEngine.h"
 
@@ -24,10 +25,13 @@ SearchEngine::SearchEngine(unsigned depth, const Data *data) {
   }
 }
 
-void SearchEngine::run() {
+void SearchEngine::run() {  
   // TODO: EXTENSION NEEDED
   // The origianl code assumes that action and response are column vectors. Only
-  // action[i][0] and response[i][0] are used for each row. 
+  // action[i][0] and response[i][0] are used for each row.
+  using namespace std::chrono;   
+  auto t1 = high_resolution_clock::now();
+  
   auto nChoice = log_.size();   
   auto nSample = data_->nSample();
   auto T0 = data_->T0();
@@ -112,6 +116,12 @@ void SearchEngine::run() {
       log_[i].rank = ptr - v; 
     }
   }
+
+  auto t2 = high_resolution_clock::now();
+  auto elapsed = duration_cast<duration<double>>(t2 - t1); 
+
+  std::cout << "Completed in " << std::scientific
+            << elapsed.count() << " seconds\n"; 
 }
 
 void SearchEngine::report(size_t nTop) {
