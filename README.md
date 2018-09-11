@@ -88,8 +88,8 @@ Usage: ./genData [OPTIONS]
 By default, this generate covariates that are uniformly distributed in [0, 1]. One is free to change functions `genDouble` and `genInt` to anything that suit his/her need. 
 
 ## Authors
+Bo Zhang (zhang_bo3 at lilly.com)
 Jie Xue  (xue_jie at lilly.com)
-
 Haoda Fu (fu_haoda at lilly.com)
 
-Bo Zhang (zhang_bo3 at lilly.com)
+
