@@ -23,19 +23,20 @@ void genDouble(double *arr, size_t n) {
 }
 
 void genInt(int *arr, size_t n) {
-  std::uniform_int_distribution<> dist{0, 1};
+  std::uniform_int_distribution<> dist{0, 5};
   for (size_t i = 0; i < n; ++i)
     arr[i] = dist(engine);
 }
 
 void printUsage(char *program) {
   fprintf(stdout, "Usage: %s [OPTIONS]\n"
-          "--seed=NUM  Seed of the random number generator, default is 0\n"
-          "--nCont=NUM Number of continuous variables, default is 1\n"
-          "--nOrd=NUM  Number of ordinal variables, default is 1\n"
-          "--nNom=NUM  Number of noninal variables, default is 1\n"
-          "--nAct=NUM  Number of actions, default is 1\n"
-          "--nResp=NUM Number of responses, default is 1\n",
+          "--seed=NUM    Seed of the random number generator, default is 0\n"
+          "--nSample=NUM Number of samples, default is 10\n"
+          "--nCont=NUM   Number of continuous variables, default is 1\n"
+          "--nOrd=NUM    Number of ordinal variables, default is 1\n"
+          "--nNom=NUM    Number of noninal variables, default is 1\n"
+          "--nAct=NUM    Number of actions, default is 1\n"
+          "--nResp=NUM   Number of responses, default is 1\n",
           program);
 }
 
