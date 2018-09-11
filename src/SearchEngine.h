@@ -11,12 +11,15 @@ class SearchEngine {
 public:
   // Constructor
   SearchEngine(unsigned depth, const Data *data); 
-  
+
+  // Return the number of searches to examine
+  size_t nChoices() const { return log_.size(); }
+
   // Run the comprehensive search
-  void run(); 
+  void run(unsigned nThreads); 
 
   // Report the best results
-  void report(size_t nTop); 
+  void report(size_t nTop);
   
 private:
   int depth_;  // Depth of the search

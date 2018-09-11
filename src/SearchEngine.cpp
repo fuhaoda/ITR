@@ -26,27 +26,30 @@ SearchEngine::SearchEngine(unsigned depth, const Data *data) {
   }
 }
 
-void SearchEngine::run() {  
+void SearchEngine::run(unsigned nThreads) {  
   // TODO: EXTENSION NEEDED
   // The origianl code assumes that action and response are column vectors. Only
   // action[i][0] and response[i][0] are used for each row.
 
   // Get number of cores
   unsigned nCores = std::thread::hardware_concurrency();
-  std::vector<std::thread> threads(nCores);
+
+  if (nThreads > nCores)
+    nThreads = nCores;   
+  std::vector<std::thread> threads(nThreads);
 
   using namespace std::chrono;   
   auto t1 = high_resolution_clock::now();
 
   if (depth_ == 1) {
-    for (size_t i = 0; i < nCores; ++i)
-      threads[i] = std::thread(&SearchEngine::runDepthOneSearch, this, i, nCores);
+    for (size_t i = 0; i < nThreads; ++i)
+      threads[i] = std::thread(&SearchEngine::runDepthOneSearch, this, i, nThreads);
   } else if (depth_ == 2) {
-    for (size_t i = 0; i < nCores; ++i)
-      threads[i] = std::thread(&SearchEngine::runDepthTwoSearch, this, i, nCores);
+    for (size_t i = 0; i < nThreads; ++i)
+      threads[i] = std::thread(&SearchEngine::runDepthTwoSearch, this, i, nThreads);
   } else {
-    for (size_t i = 0; i < nCores; ++i)
-      threads[i] = std::thread(&SearchEngine::runDepthThreeSearch, this, i, nCores);
+    for (size_t i = 0; i < nThreads; ++i)
+      threads[i] = std::thread(&SearchEngine::runDepthThreeSearch, this, i, nThreads);
   }
 
   for (auto &th : threads)
@@ -57,7 +60,7 @@ void SearchEngine::run() {
 
   std::cout << "Completed in " << std::scientific
             << elapsed.count() << " seconds using "
-            << nCores << " logical cores\n"; 
+            << nThreads << " threads\n"; 
 }
 
 void SearchEngine::report(size_t nTop) {

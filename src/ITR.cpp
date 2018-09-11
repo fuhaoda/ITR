@@ -20,9 +20,9 @@ ITR::ITR(std::string input, unsigned depth) {
   engine = std::make_unique<SearchEngine>(depth, data.get());  
 }
 
-void ITR::run() const {
-  std::cout << "Searching ...\n";
-  engine->run(); 
+void ITR::run(unsigned nThreads) const {
+  std::cout << "Searching " << engine->nChoices() << " choices ...\n";
+  engine->run(nThreads); 
 } 
 
 

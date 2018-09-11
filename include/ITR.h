@@ -10,8 +10,8 @@ public:
   // Constructor
   ITR(std::string input, unsigned depth); 
   
-  // Run the comprehensive search 
-  void run() const;
+  // Run the comprehensive search using nThreads 
+  void run(unsigned nThreads = 1) const;
 
   // Display the top n search results
   void report(size_t nTop = 1) const; 
