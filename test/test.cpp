@@ -46,19 +46,18 @@ TEST(CovariateConvertTest, Nom) {
 
 TEST(DataTest, Load) {
   ITR::Data data("sample100.csv");  
-  std::vector<int> nCut = {10, 10, 10, 5, 5, 5, 5, 5, 5}; 
+  std::vector<int> nCut = {10, 10, 10, 5, 5, 5, 16, 16, 16}; 
   const double T0 = 2841.77937;
-  const double a_r28_c0 = 0;
+  const double a28 = 0;
   const double y_r11_c0 = 12.4483;
   
   EXPECT_EQ(100, data.nSample());
   EXPECT_EQ(3, data.nCont());
   EXPECT_EQ(3, data.nOrd());
   EXPECT_EQ(3, data.nNom());
-  EXPECT_EQ(1, data.nAct());
   EXPECT_EQ(1, data.nResp());
   EXPECT_EQ(T0, data.T0()); 
-  EXPECT_EQ(a_r28_c0, data.act(28, 0));
+  EXPECT_EQ(a28, data.act(28));
   EXPECT_EQ(y_r11_c0, data.resp(11, 0)); 
 
   for (size_t i = 0; i < nCut.size(); ++i)
@@ -66,8 +65,10 @@ TEST(DataTest, Load) {
 
   // Check which cuts does each component of continuous variable #1 fall in
   std::vector<int> cidx = {12, 37, 67, 16, 92, 28, 88, 71, 74, 1};
-  for (auto i = 0; i < 10; ++i)
-    EXPECT_EQ(true, data.inCut(cidx[i], 0, i)) << "Values differ at index " << i; 
+  for (size_t i = 0; i < cidx.size(); ++i) {
+    const auto mask = data.cutMask(0, i);
+    EXPECT_EQ(true, mask[cidx[i]]) << "Values differ at index " << i;
+  }
 }
 
 } // namespace 
