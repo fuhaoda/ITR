@@ -6,26 +6,29 @@
 void printUsage(char *program) {
   fprintf(stdout, "Usage: %s [OPTIONS]\n"
           "--data=STRING  Path to input file, default is sample100.csv\n"
-          "--thread=NUM   Number of threads to use, default is 1\n",
+          "--thread=NUM   Number of threads to use, default is 1\n"
+          "--best=NUM     Number of top results to display, default is 5\n",
           program);
 }
 
 int main(int argc, char **argv) {
   std::string ifile{"sample100.csv"};
   unsigned nThreads = 1;
+  unsigned nTop = 5; 
 
   // Parse command line
   static struct option long_options[] =
     {
      {"data", required_argument, 0, 'd'},
      {"thread", required_argument, 0, 't'},
+     {"best", required_argument, 0, 'b'}, 
      {"help", no_argument, 0, 'h'},
      {0, 0, 0, 0}, 
     };
 
   int opt = 0;
   int long_index = 0;
-  while ((opt = getopt_long(argc, argv, "d:t:h",
+  while ((opt = getopt_long(argc, argv, "d:t:b:h",
                             long_options, &long_index)) != -1) {
     switch (opt) {
     case 'd':
@@ -34,6 +37,9 @@ int main(int argc, char **argv) {
     case 't':
       nThreads = atoi(optarg);
       break;
+    case 'b':
+      nTop = atoi(optarg);
+      break; 
     case 'h':
     case '?':
       printUsage(argv[0]);
@@ -60,7 +66,7 @@ int main(int argc, char **argv) {
     // integer input, say n, and the function will print out information
     // associated with the best n search results. If n is larger than the number
     // of searches performed, it will be truncated internally. 
-    instance.report(5);
+    instance.report(nTop);
   } catch (const char *msg) {
     std::cout << msg << "\n";
   }
