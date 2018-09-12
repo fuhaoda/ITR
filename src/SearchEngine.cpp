@@ -1,6 +1,4 @@
 #include <iostream>
-#include <vector>
-#include <bitset>
 #include <algorithm>
 #include <chrono>
 #include <iomanip>
@@ -16,13 +14,64 @@ SearchEngine::SearchEngine(unsigned depth, const Data *data) {
   depth_ = depth;
   data_ = data;
 
-  // Go over the data and find all the possible search choices
-  if (depth == 1) {
-    setDepthOneChoices();
-  } else if (depth == 2) {
-    setDepthTwoChoices();
+  // Set all the possible search choices
+  setSearchChoices(); 
+}
+
+void SearchEngine::setSearchChoices() {
+  auto nVar = data_->nVar();
+
+  if (depth_ == 1) {
+    for (size_t i = 0; i < nVar; ++i) {
+      auto nCut = data_->nCut(i);
+      for (size_t j = 0; j < nCut; ++j) {
+        Meta record;
+        record.vIdx.push_back(i);
+        record.cIdx.push_back(j);
+        log_.push_back(std::move(record));
+      }
+    }
+  } else if (depth_ == 2) {
+    for (size_t i1 = 0; i1 < nVar; ++i1) {
+      auto nCut1 = data_->nCut(i1); 
+      for (size_t i2 = i1 + 1; i2 < nVar; ++i2) {
+        auto nCut2 = data_->nCut(i2);
+        for (size_t j1 = 0; j1 < nCut1; ++j1) {
+          for (size_t j2 = 0; j2 < nCut2; ++j2) {
+            Meta record;
+            record.vIdx.push_back(i1);
+            record.vIdx.push_back(i2);
+            record.cIdx.push_back(j1);
+            record.cIdx.push_back(j2);
+            log_.push_back(std::move(record));
+          }
+        }
+      }
+    }  
   } else { // depth == 3
-    setDepthThreeChoices();
+    for (size_t i1 = 0; i1 < nVar; ++i1) {
+      auto nCut1 = data_->nCut(i1); 
+      for (size_t i2 = i1 + 1; i2 < nVar; ++i2) {
+        auto nCut2 = data_->nCut(i2); 
+        for (size_t i3 = i2 + 1; i3 < nVar; ++i3) {
+          auto nCut3 = data_->nCut(i3);
+          for (size_t j1 = 0; j1 < nCut1; ++j1) {
+            for (size_t j2 = 0; j2 < nCut2; ++j2) {
+              for (size_t j3 = 0; j3 < nCut3; ++j3) {
+                Meta record;
+                record.vIdx.push_back(i1);
+                record.vIdx.push_back(i2);
+                record.vIdx.push_back(i3);
+                record.cIdx.push_back(j1);
+                record.cIdx.push_back(j2);
+                record.cIdx.push_back(j3);
+                log_.push_back(std::move(record));
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }
 
@@ -41,16 +90,8 @@ void SearchEngine::run(unsigned nThreads) {
   using namespace std::chrono;   
   auto t1 = high_resolution_clock::now();
 
-  if (depth_ == 1) {
-    for (size_t i = 0; i < nThreads; ++i)
-      threads[i] = std::thread(&SearchEngine::runDepthOneSearch, this, i, nThreads);
-  } else if (depth_ == 2) {
-    for (size_t i = 0; i < nThreads; ++i)
-      threads[i] = std::thread(&SearchEngine::runDepthTwoSearch, this, i, nThreads);
-  } else {
-    for (size_t i = 0; i < nThreads; ++i)
-      threads[i] = std::thread(&SearchEngine::runDepthThreeSearch, this, i, nThreads);
-  }
+  for (size_t i = 0; i < nThreads; ++i)
+    threads[i] = std::thread(&SearchEngine::worker, this, i, nThreads);
 
   for (auto &th : threads)
     th.join();
@@ -63,362 +104,113 @@ void SearchEngine::run(unsigned nThreads) {
             << nThreads << " threads\n"; 
 }
 
-void SearchEngine::report(size_t nTop) {
-  // Cap nTop 
-  if (nTop > log_.size())
-    nTop = log_.size(); 
-
-  // Sort the logs based on comparing values in result
-  std::sort(log_.begin(), log_.end(),
-            [](MetaData &d1, MetaData &d2) {return d1.result > d2.result;});
-
-  size_t iter = 0; 
-  for (auto it = log_.begin(); it != log_.end(); ++it) {
-    std::cout << "Value is " << std::scientific << it->result
-              << ", obtained from\n";
-    for (auto d = 0; d < depth_; ++d) {
-      auto vIdx = it->vIdx[d];
-      auto cIdx = it->cIdx[d];
-      auto m = it->rank & (1 << (depth_ - 1 - d));
-      data_->cutInfo(vIdx, cIdx, m); 
-    }
-
-    if (iter++ >= nTop)
-      break;
-  }
-}
-
-
-void SearchEngine::setDepthOneChoices() {
-  auto nCont = data_->nCont();
-  auto nOrd = data_->nOrd();
-  auto nVar = data_->nVar();
-  for (size_t j = 0; j < nCont + nOrd; ++j) {
-    for (size_t k = 0; k < data_->nCut(j); ++k) {
-      MetaData record; 
-      record.vIdx.push_back(j);
-      record.cIdx.push_back(k);
-      log_.push_back(std::move(record)); 
-    }
-  }
-
-  for (size_t j = nCont + nOrd; j < nVar; ++j) {
-    size_t max = 1 << data_->nCut(j);
-    size_t half = data_->nCut(j) / 2;
-    for (size_t k = 0; k < max; ++k) {
-      std::bitset<64> subset(k);
-      if (subset.count() <= half) {
-        MetaData record;
-        record.vIdx.push_back(j);
-        record.cIdx.push_back(k);
-        log_.push_back(std::move(record));       
-      }
-    }
-  }            
-}
-
-void SearchEngine::setDepthTwoChoices() {
-  auto nCont = data_->nCont();
-  auto nOrd = data_->nOrd();
-  auto nVar = data_->nVar();
-
-  for (size_t j1 = 0; j1 < nCont + nOrd; ++j1) {
-    for (size_t j2 = j1 + 1; j2 < nCont + nOrd; ++j2) {
-      for (size_t k1 = 0; k1 < data_->nCut(j1); ++k1) {
-        for (size_t k2 = 0; k2 < data_->nCut(j2); ++k2) {
-          MetaData record;
-          record.vIdx.push_back(j1);
-          record.vIdx.push_back(j2);
-          record.cIdx.push_back(k1);
-          record.cIdx.push_back(k2);
-          log_.push_back(std::move(record));           
-        }
-      }
-    }
-
-    for (size_t j2 = nCont + nOrd; j2 < nVar; ++j2) {
-      size_t max2 = 1 << data_->nCut(j2);
-      size_t half2 = data_->nCut(j2) / 2;
-      for (size_t k2 = 0; k2 < max2; ++k2) {
-        std::bitset<64> subset2(k2);
-        if (subset2.count() <= half2) {
-          for (size_t k1 = 0; k1 < data_->nCut(j1); ++k1) {
-            MetaData record;
-            record.vIdx.push_back(j1);
-            record.vIdx.push_back(j2);
-            record.cIdx.push_back(k1);
-            record.cIdx.push_back(k2);
-            log_.push_back(std::move(record));           
-          }
-        }
-      }
-    }
-  }
-
-  for (size_t j1 = nCont + nOrd; j1 < nVar; ++j1) {
-    size_t max1 = 1 << data_->nCut(j1);
-    size_t half1 = data_->nCut(j1) / 2;
-    for (size_t j2 = j1 + 1; j2 < nVar; ++j2) {
-      size_t max2 = 1 << data_->nCut(j2);
-      size_t half2 = data_->nCut(j2) / 2;
-      for (size_t k1 = 0; k1 < max1; ++k1) {
-        std::bitset<64> subset1(k1);
-        if (subset1.count() <= half1) {
-          for (size_t k2 = 0; k2 < max2; ++k2) {
-            std::bitset<64> subset2(k2);
-            if (subset2.count() <= half2) {
-              MetaData record;
-              record.vIdx.push_back(j1);
-              record.vIdx.push_back(j2);
-              record.cIdx.push_back(k1);
-              record.cIdx.push_back(k2);
-              log_.push_back(std::move(record));                         
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-void SearchEngine::setDepthThreeChoices() {
-  auto nCont = data_->nCont();
-  auto nOrd = data_->nOrd();
-  auto nVar = data_->nVar();
-
-  for (size_t j1 = 0; j1 < nCont + nOrd; ++j1) {
-    for (size_t j2 = j1 + 1; j2 < nCont + nOrd; ++j2) {
-      for (size_t j3 = j2 + 1; j3 < nCont + nOrd; ++j3) {
-        for (size_t k1 = 0; k1 < data_->nCut(j1); ++k1) {
-          for (size_t k2 = 0; k2 < data_->nCut(j2); ++k2) {
-            for (size_t k3 = 0; k3 < data_->nCut(j3); ++k3) {
-              MetaData record;
-              record.vIdx.push_back(j1);
-              record.vIdx.push_back(j2);
-              record.vIdx.push_back(j3);
-              record.cIdx.push_back(k1);
-              record.cIdx.push_back(k2);
-              record.cIdx.push_back(k3); 
-              log_.push_back(std::move(record));                         
-            }
-          }
-        }
-      }
-
-      for (size_t j3 = nCont + nOrd; j3 < nVar; ++j3) {
-        size_t max3 = 1 << data_->nCut(j3);
-        size_t half3 = data_->nCut(j3) / 2;
-        for (size_t k3 = 0; k3 < max3; ++k3) {
-          std::bitset<64> subset3(k3);
-          if (subset3.count() <= half3) {
-            for (size_t k1 = 0; k1 < data_->nCut(j1); ++k1) {
-              for (size_t k2 = 0; k2 < data_->nCut(j2); ++k2) {
-                MetaData record;
-                record.vIdx.push_back(j1);
-                record.vIdx.push_back(j2);
-                record.vIdx.push_back(j3);
-                record.cIdx.push_back(k1);
-                record.cIdx.push_back(k2);
-                record.cIdx.push_back(k3); 
-                log_.push_back(std::move(record));                           
-              }
-            }
-          }
-        }
-      }
-    }
-
-    for (size_t j2 = nCont + nOrd; j2 < nVar; ++j2) {
-      size_t max2 = 1 << data_->nCut(j2);
-      size_t half2 = data_->nCut(j2) / 2; 
-      for (size_t j3 = j2 + 1; j3 < nVar; ++j3) {
-        size_t max3 = 1 << data_->nCut(j3);
-        size_t half3 = data_->nCut(j3) / 2;
-        for (size_t k2 = 0; k2 < max2; ++k2) {
-          std::bitset<64> subset2(k2);
-          if (subset2.count() <= half2) {
-            for (size_t k3 = 0; k3 < max3; ++k3) {
-              std::bitset<64> subset3(k3);
-              if (subset3.count() <= half3) {
-                for (size_t k1 = 0; k1 < data_->nCut(j1); ++k1) {
-                  MetaData record;
-                  record.vIdx.push_back(j1);
-                  record.vIdx.push_back(j2);
-                  record.vIdx.push_back(j3);
-                  record.cIdx.push_back(k1);
-                  record.cIdx.push_back(k2);
-                  record.cIdx.push_back(k3); 
-                  log_.push_back(std::move(record));           
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  for (size_t j1 = nCont + nOrd; j1 < nVar; ++j1) {
-    size_t max1 = 1 << data_->nCut(j1);
-    size_t half1 = data_->nCut(j1) / 2; 
-    for (size_t j2 = j1 + 1; j2 < nVar; ++j2) {
-      size_t max2 = 1 << data_->nCut(j2);
-      size_t half2 = data_->nCut(j2) / 2; 
-      for (size_t j3 = j2 + 1; j3 < nVar; ++j3) {
-        size_t max3 = 1 << data_->nCut(j3);
-        size_t half3 = data_->nCut(j3) / 2;
-        for (size_t k1 = 0; k1 < max1; ++k1) {
-          std::bitset<64> subset1(k1);
-          if (subset1.count() <= half1) {
-            for (size_t k2 = 0; k2 < max2; ++k2) {
-              std::bitset<64> subset2(k2);
-              if (subset2.count() <= half2) {
-                for (size_t k3 = 0; k3 < max3; ++k3) {
-                  std::bitset<64> subset3(k3);
-                  if (subset3.count() <= half3) {
-                    MetaData record;
-                    record.vIdx.push_back(j1);
-                    record.vIdx.push_back(j2);
-                    record.vIdx.push_back(j3);
-                    record.cIdx.push_back(k1);
-                    record.cIdx.push_back(k2);
-                    record.cIdx.push_back(k3); 
-                    log_.push_back(std::move(record));
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }  
-}
-
-void SearchEngine::setSearchRange(size_t tid, unsigned nThreads,
-                                  size_t &firstSearchID,
-                                  size_t &lastSearchID) {
+void SearchEngine::setRange(size_t tid, unsigned nThreads,
+                            size_t &first, size_t &last) {
   auto nChoice = log_.size();
-  auto choicePerCore = nChoice / nThreads;
+  auto choicePerThread = nChoice / nThreads;
   auto remainder = nChoice % nThreads;
 
   if (tid < remainder) {
-    firstSearchID = (choicePerCore + 1) * tid;
-    lastSearchID = firstSearchID + choicePerCore + 1;
+    first = (choicePerThread + 1) * tid;
+    last = first + choicePerThread + 1;
   } else {
-    firstSearchID = choicePerCore * tid + remainder;
-    lastSearchID = firstSearchID + choicePerCore;
-  }    
+    first = choicePerThread * tid + remainder;
+    last = first + choicePerThread;
+  }
 }
 
-void SearchEngine::runDepthOneSearch(size_t tid, unsigned nThreads) {
+void SearchEngine::worker(size_t tid, unsigned nThreads) {
+  size_t first = 0, last = 0;
+  setRange(tid, nThreads, first, last); 
+
   auto nSample = data_->nSample(); 
   auto T0 = data_->T0();
   auto scaling_factor = 2.0 / nSample;
 
-  size_t firstSearchID{0}, lastSearchID{0};
-  setSearchRange(tid, nThreads, firstSearchID, lastSearchID);
+  if (depth_ == 1) {
+    for (size_t i = first; i < last; ++i) {
+      double v[4] = {0.0};
+      const auto mask = data_->cutMask(log_[i].vIdx[0], log_[i].cIdx[0]);
 
-  for (size_t i = firstSearchID; i < lastSearchID; ++i) {
-    double v[4] = {0.0};
-    auto vIdx = log_[i].vIdx[0];
-    auto cIdx = log_[i].cIdx[0]; 
-    for (size_t j = 0; j < nSample; ++j) {
-      auto m = data_->inCut(j, vIdx, cIdx);
-      auto act = data_->act(j, 0);
-      auto resp = data_->resp(j, 0);
-      v[2 * m + act] += resp;
+      for (size_t j = 0; j < nSample; ++j) 
+      v[2 * mask[j] + data_->act(j)] += data_->resp(j, 0);
+      
+
+      v[0] = v[1] - v[0];
+      v[1] = v[3] - v[2];
+      
+      if (v[0] < v[1]) {
+        log_[i].result = (v[0] + T0) * scaling_factor;
+        log_[i].rank = 0;
+      } else {
+        log_[i].result = (v[1] + T0) * scaling_factor;
+        log_[i].rank = 1;
+      }
     }
-    
-    v[0] = v[1] - v[0];
-    v[1] = v[3] - v[2];
-    
-    if (v[0] < v[1]) {
-      log_[i].result = (v[0] + T0) * scaling_factor;
-      log_[i].rank = 0;
-    } else {
-      log_[i].result = (v[1] + T0) * scaling_factor;
-      log_[i].rank = 1;
-    }
-  }    
-}
+  } else if (depth_ == 2) {
+    for (size_t i = first; i < last; ++i) {
+      double v[8] = {0.0};
+      const auto mask1 = data_->cutMask(log_[i].vIdx[0], log_[i].cIdx[0]);
+      const auto mask2 = data_->cutMask(log_[i].vIdx[1], log_[i].cIdx[1]);
+      
+      for (size_t j = 0; j < nSample; ++j) 
+        v[4 * mask1[j] + 2 * mask2[j] + data_->act(j)] += data_->resp(j, 0);
 
-void SearchEngine::runDepthTwoSearch(size_t tid, unsigned nThreads) {
-  auto nSample = data_->nSample(); 
-  auto T0 = data_->T0();
-  auto scaling_factor = 2.0 / nSample;
+      v[0] = v[1] - v[0];
+      v[1] = v[3] - v[2];
+      v[2] = v[5] - v[4];
+      v[3] = v[7] - v[6];
+      
+      const auto ptr = std::max_element(v, v + 4);
+      log_[i].result = (*ptr + T0) * scaling_factor;
+      log_[i].rank = ptr - v; 
+    }  
+  } else { // depth_ == 3
+    for (size_t i = first; i < last; ++i) {
+      double v[16] = {0.0};
+      const auto mask1 = data_->cutMask(log_[i].vIdx[0], log_[i].cIdx[0]);
+      const auto mask2 = data_->cutMask(log_[i].vIdx[1], log_[i].cIdx[1]);
+      const auto mask3 = data_->cutMask(log_[i].vIdx[2], log_[i].cIdx[2]); 
+      
+      for (size_t j = 0; j < nSample; ++j) 
+        v[8 * mask1[j] + 4 * mask2[j] + 2 * mask3[j] + data_->act(j)] +=
+          data_->resp(j, 0);
 
-  size_t firstSearchID{0}, lastSearchID{0};
-  setSearchRange(tid, nThreads, firstSearchID, lastSearchID);
-
-  for (size_t i = firstSearchID; i < lastSearchID; ++i) {
-    double v[8] = {0.0};
-    auto vIdx1 = log_[i].vIdx[0];
-    auto vIdx2 = log_[i].vIdx[1];
-    auto cIdx1 = log_[i].cIdx[0];
-    auto cIdx2 = log_[i].cIdx[1]; 
-    for (size_t j = 0; j < nSample; ++j) {
-      auto m1 = data_->inCut(j, vIdx1, cIdx1);
-      auto m2 = data_->inCut(j, vIdx2, cIdx2);
-      auto act = data_->act(j, 0);
-      auto resp = data_->resp(j, 0);
-      v[4 * m1 + 2 * m2 + act] += resp;
-    }
-
-    v[0] = v[1] - v[0];
-    v[1] = v[3] - v[2];
-    v[2] = v[5] - v[4];
-    v[3] = v[7] - v[6];
-    
-    const auto ptr = std::max_element(v, v + 4);
-    log_[i].result = (*ptr + T0) * scaling_factor;
-    log_[i].rank = ptr - v; 
-  }  
-}
-
-void SearchEngine::runDepthThreeSearch(size_t tid, unsigned nThreads) {
-  auto nSample = data_->nSample(); 
-  auto T0 = data_->T0();
-  auto scaling_factor = 2.0 / nSample;
-
-  size_t firstSearchID{0}, lastSearchID{0};
-  setSearchRange(tid, nThreads, firstSearchID, lastSearchID); 
-
-  for (size_t i = firstSearchID; i < lastSearchID; ++i) {
-    double v[16] = {0.0};
-    auto vIdx1 = log_[i].vIdx[0];
-    auto vIdx2 = log_[i].vIdx[1];
-    auto vIdx3 = log_[i].vIdx[2];
-    auto cIdx1 = log_[i].cIdx[0];
-    auto cIdx2 = log_[i].cIdx[1];
-    auto cIdx3 = log_[i].cIdx[2];
-    for (size_t j = 0; j < nSample; ++j) {
-      auto m1 = data_->inCut(j, vIdx1, cIdx1);
-      auto m2 = data_->inCut(j, vIdx2, cIdx2);
-      auto m3 = data_->inCut(j, vIdx3, cIdx3);
-      auto act = data_->act(j, 0);
-      auto resp = data_->resp(j, 0);
-      v[8 * m1 + 4 * m2 + 2 * m3 + act] += resp;
-    }
-    
-    v[0] = v[1] - v[0];
-    v[1] = v[3] - v[2];
-    v[2] = v[5] - v[4];
-    v[3] = v[7] - v[6];
-    v[4] = v[9] - v[8];
-    v[5] = v[11] - v[10];
-    v[6] = v[13] - v[12];
-    v[7] = v[15] - v[14];
-    
-    const auto ptr = std::max_element(v, v + 8);
-    log_[i].result = (*ptr + T0) * scaling_factor;
-    log_[i].rank = ptr - v; 
-  }  
+      v[0] = v[1] - v[0];
+      v[1] = v[3] - v[2];
+      v[2] = v[5] - v[4];
+      v[3] = v[7] - v[6];
+      v[4] = v[9] - v[8];
+      v[5] = v[11] - v[10];
+      v[6] = v[13] - v[12];
+      v[7] = v[15] - v[14];
+      
+      const auto ptr = std::max_element(v, v + 8);
+      log_[i].result = (*ptr + T0) * scaling_factor;
+      log_[i].rank = ptr - v; 
+    }  
+  }
 }
 
 
+void SearchEngine::report(size_t nTop) {
+  // Cap nTop 
+  if (nTop > log_.size())
+    nTop = log_.size();
 
+  // Sort the logs based on comparing values in result
+  std::sort(log_.begin(), log_.end(),
+            [](Meta &d1, Meta &d2) {return d1.result > d2.result;});
 
-
+  for (size_t i = 0; i < nTop; ++i) {
+    std::cout << "Value is " << std::scientific << log_[i].result
+              << ", obtained from\n";
+    for (auto d = 0; d < depth_; ++d) {
+      data_->cutInfo(log_[i].vIdx[d], log_[i].cIdx[d],
+                     log_[i].rank & (1 << (depth_ - 1 - d)));
+    }
+  }
+}
+  
 
 } // namespace ITR

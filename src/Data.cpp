@@ -3,6 +3,7 @@
 #include <iterator>
 #include <algorithm>
 #include <cstring>
+#include <bitset>
 #include <sys/stat.h>
 #include "Data.h"
 #include "Covariate.h"
@@ -66,8 +67,6 @@ void Data::parseCSVHeader(std::ifstream &infile) {
       nOrd_++;
     } else if (field.find("NOM") != std::string::npos) {
       nNom_++; 
-    } else if (field.find("A") != std::string::npos) {
-      nAct_++;
     } else if (field.find("Y") != std::string::npos) {
       nResp_++;
     }
@@ -116,13 +115,12 @@ void Data::loadRawData(std::ifstream &infile,
       uniqNom_[i].insert(val);
     }
 
-    // Read actions
+    // Read action
     // TODO: handle generic case other than 0-1 boolean 
-    for (size_t i = 0; i < nAct_; ++i) {
-      getline(ss, field, ',');
-      act_.push_back(stoi(field));
-    }
-    
+    getline(ss, field, ',');
+    act_.push_back(stoi(field));
+
+    // Read responses
     for (size_t i = 0; i < nResp_; ++i) {
       getline(ss, field, ',');
       resp_.push_back(stod(field));
@@ -135,12 +133,12 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
                         std::vector<std::vector<int>> &nom) {
   // Set up T0
   for (size_t i = 0; i < nSample_; ++i) {
-    if (!act_[i * nAct_])
+    if (!act_[i])
       T0_ += resp_[i * nResp_];
   }
   
-  // Parse continuous variables
-  for (size_t i = 0; i < nCont_; ++i)
+  // Parse continuous variables and set up cut masks
+  for (size_t i = 0; i < nCont_; ++i) 
     convertContToDeciles(cont[i]);
 
   // Parse ordinal variables
@@ -171,69 +169,81 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
     memcpy(v, nom[i].data(), sizeof(int) * nSample_);
     v += nSample_; 
   }
+
+  // Set cut masks for each variable
+  cMask_.resize(nVar_); 
+  for (size_t i = 0; i < nVar_; ++i)
+    setCutMasks(i); 
 }
 
-size_t Data::nCut(size_t i) const {
-  if (i < nCont_) {
-    return 10; 
-  } else if (i < nCont_ + nOrd_) {
-    i -= nCont_; 
-    return uniqOrd_[i].size();
+void Data::setCutMasks(size_t vIdx) {
+  // Get the handle of the data
+  const auto data = cvar_.data() + vIdx * nSample_;
+
+  if (vIdx < nCont_) {
+    // Continuous variable has 10 cuts
+    for (int value = 0; value < 10; ++value) {
+      std::vector<bool> mask(nSample_);
+      for (size_t j = 0; j < nSample_; ++j)
+        mask[j] = data[j] <= value; 
+  
+      cMask_[vIdx].value.push_back(value);
+      cMask_[vIdx].mask.push_back(mask);
+    }
+  } else if (vIdx < nCont_ + nOrd_) {
+    // The number of cuts for ordinal variable vIdx is the number of the unique
+    // values.
+
+    for (const auto &value : uniqOrd_[vIdx - nCont_]) {
+      std::vector<bool> mask(nSample_);
+      for (size_t j = 0; j < nSample_; ++j)
+        mask[j] = data[j] <= value;
+
+      cMask_[vIdx].value.push_back(value);
+      cMask_[vIdx].mask.push_back(mask);
+    }
   } else {
-    // The number of cuts for a nominal variable is the number of subsets that
-    // no more than half of the unique values. 
-    
-    // The subsets used to be stored explicitly. The current implementation
-    // skips this storage.
-    
-    // The function here simply returns the number of unique values, denoted
-    // by p.
-    
-    // The search needs to loop through [0, 2^p). Each iterator is interpreted
-    // as a bitmask, where bit i corresponds to the ith element in the unique
-    // set. For each integer, if the number of 1 bits is no more than p / 2,
-    // then it is a valid cut, where the subset consists of the elements
-    // corresponding to the 1 bits in the integer. 
-    
-    // If iterator 'iter' is a valid subset (cut), one can decide if component
-    // j of the nominal variable belongs to the subset by performing bitwise
-    // AND as component j saves the rank of the original value in the unique
-    // set.
-    i -= (nCont_ + nOrd_); 
-    return uniqNom_[i].size();
+    // The number of cuts for nominal variable vIdx is the number of subsets
+    // that contain no more than half of the unique values.
+
+    // Denote the number of unique values by p. Here, we loop from 0 to
+    // 2^p. Each iterator is interpreted as a bitmask, where bit j means the jth
+    // element in the unique set. For each integer, if the number of 1 bits is
+    // no more than half of p, it then represents a valid cut, and the subset
+    // consists of the elements corresponding to the 1 bits in the integer.
+    size_t max = 1 << (uniqNom_[vIdx - nCont_ - nOrd_].size());
+    size_t half = max / 2;
+
+    for (size_t value = 0; value < max; ++value) {
+      std::bitset<64> subset(value);
+      if (subset.count() <= half) {
+        std::vector<bool> mask(nSample_);
+        for (size_t j = 0; j < nSample_; ++j)
+          mask[j] = data[j] & value;
+
+        cMask_[vIdx].value.push_back(static_cast<int>(value));
+        cMask_[vIdx].mask.push_back(mask); 
+      }
+    }   
   }
 }
 
-bool Data::inCut(size_t i, size_t j, size_t k) const {
-  // This function compares the ith component of variable j against cut k.
-  // If column j is a continuous or ordinal variable, we simply compare the value
-  // If column j is a nominal variable, we return the result of bitwise AND
-  size_t val = cvar_[j * nSample_ + i]; 
-  return (j < nCont_ + nOrd_ ? val <= k : val & k);
-}
-
-void Data::cutInfo(size_t i, size_t j, bool m) const {
-  if (i < nCont_) {
-    std::cout << "  X" << i << (m ? " >= " : " < ") << j << "\n";
-  } else if (i < nCont_ + nOrd_) {
-    i -= nCont_; 
-    auto it = uniqOrd_[i].begin();
-    std::advance(it, j);     
-    std::cout << "  X" << i << (m ? " >= " : " < ") << *it << "\n";
+void Data::cutInfo(size_t vIdx, size_t cIdx, bool m) const {
+  if (vIdx < nCont_ + nOrd_) {
+    std::cout << "  X" << vIdx << (m ? " >= " : " < ")
+              << cMask_[vIdx].value[cIdx] << "\n";
   } else {
-    std::cout << "  X" << i << (m ? " not in " : " in ") << "{";
-    i -= nCont_ + nOrd_; 
-    int iter = 0;
-    for (auto const &v : uniqOrd_[i]) {
-      if (j & iter)
+    std::cout << "  X" << vIdx << (m ? " not in " : " in ") << "{";
+    auto subset = cMask_[vIdx].value[cIdx];
+    unsigned iter = 0; 
+    for (auto const &v : uniqOrd_[vIdx - nCont_ - nOrd_]) {
+      if (iter & subset)
         std::cout << v << ", ";
       iter++;
     }
-    std::cout << "\b\b}\n"; 
+    std::cout <<"\b\b}\n";
   }
 }
 
-
 } // namespace ITR
-
 
