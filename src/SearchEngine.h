@@ -22,44 +22,39 @@ public:
   void report(size_t nTop);
   
 private:
-  int depth_;  // Depth of the search
-  const Data *data_; // Data associated with the search
+  // Depth of the search  
+  int depth_;
 
-  struct MetaData {
-    std::vector<size_t> vIdx; // Choices of variables used in the search
-    std::vector<size_t> cIdx; // Choices of cut levels used in the search
+  // Data associated with the search
+  const Data *data_; 
 
-    // There are 2^(depth + 1) searches formed by the above variable and cut
-    // level combinations.
-    double result;            // Best values among the 2^(depth + 1) searches
-    size_t rank;              // Rank of the best value within the 2^(depth + 1)
-                              // searches
+  struct Meta {
+    // Chices of variables used in the search    
+    std::vector<size_t> vIdx;
+
+    // Choices of cuts used in the search
+    std::vector<size_t> cIdx;
+
+    // Best result among the 2^(depth + 1) searches formed by the above variable
+    // and cut combinations
+    double result;
+
+    // Rank of the best value with the 2^(depth + 1) searches
+    size_t rank;
   };
-  
-  std::vector<MetaData> log_; // Search history 
 
-  // This function discovers all the choices for depth one search
-  void setDepthOneChoices();
+  // Search history
+  std::vector<Meta> log_;
 
-  // This function discovers all the choices for depth two search
-  void setDepthTwoChoices();
+  // This function sets all the search choices of the given depth
+  void setSearchChoices(); 
+    
+  // This function is the worker function for the search
+  void worker(size_t tid, unsigned nThreads);
 
-  // This function discovers all the choices for depth three search
-  void setDepthThreeChoices();
-  
-  // This funciton is the worker function for depth one search
-  void runDepthOneSearch(size_t tid, unsigned nThreads);
-
-  // This function is the worker function for depth two search
-  void runDepthTwoSearch(size_t tid, unsigned nThreads);
-
-  // This function is the worker function for depth three search
-  void runDepthThreeSearch(size_t i, unsigned nThreads);
-
-  // This is a helper function that determines the range of searches performed
-  // by each worker.
-  void setSearchRange(size_t tid, unsigned nThreads,
-                      size_t &firstSearchID, size_t &lastSearchID);   
+  // This function is a helper function that determines the range of searches
+  // worker tid needs to perfrom
+  void setRange(size_t tid, unsigned nThreads, size_t &first, size_t &last);
 }; 
 
 } // namespace ITR
