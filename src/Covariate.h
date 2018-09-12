@@ -16,8 +16,6 @@ void convertOrdToRanks(std::vector<int> &arr, const std::set<int> &uniq);
 // This function converts the value of nominal variables into bitmasks. If the
 // order of value v in the unique set is rank, the corresponding bitmask is
 // 1 << rank
-// This function converts the value of nominal variables into bitmasks 
-// 1 << rank, where rank is the order the value is added into the unique set 
 void convertNomToBitMasks(std::vector<int> &arr, const std::set<int> &uniq); 
 
 
