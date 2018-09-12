@@ -236,13 +236,18 @@ void Data::cutInfo(size_t vIdx, size_t cIdx, bool m) const {
   } else {
     std::cout << "  X" << vIdx << (m ? " not in " : " in ") << "{";
     auto subset = cMask_[vIdx].value[cIdx];
-    unsigned iter = 0; 
-    for (auto const &v : uniqOrd_[vIdx - nCont_ - nOrd_]) {
-      if (iter & subset)
-        std::cout << v << ", ";
-      iter++;
+
+    if (subset == 0) {
+      // This represents an empty set
+      std::cout << " }\n";
+    } else {   
+      unsigned iter = 0; 
+      for (auto const &v : uniqOrd_[vIdx - nCont_ - nOrd_]) {
+        if (subset & (1 << (iter++)))
+          std::cout << v << ", "; 
+      }
+      std::cout <<"\b\b}\n";
     }
-    std::cout <<"\b\b}\n";
   }
 }
 

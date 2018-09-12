@@ -103,23 +103,23 @@ Best 5 results: ...
 Value is 6.884978e+01, obtained from
   X1 >= 4
   X2 < 1
-  X7 in {1, 3, 4}.
+  X7 in {0, 2} 
 Value is 6.787278e+01, obtained from
   X1 >= 5
-  X6 in {4}
-  X7 in {4}
+  X6 in {2, 3} 
+  X7 in {2, 3} 
 Value is 6.744488e+01, obtained from
   X1 >= 4
-  X7 in {1, 3, 4}
-  X8 in {4}
+  X7 in {0, 2} 
+  X8 in {2} 
 Value is 6.742991e+01, obtained from
   X1 >= 3
   X5 >= 3
-  X6 in {4}
+  X6 in {2, 3} 
 Value is 6.740870e+01, obtained from
   X1 >= 4
-  X6 in {1, 3, 4}
-  X8 in {4}  
+  X6 in {0, 2} 
+  X8 in {2} 
 ```
 
 The `demo` directory also contains three additional source files
