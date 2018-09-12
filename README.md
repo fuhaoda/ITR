@@ -151,7 +151,9 @@ By default, this generates continuous covariates that are uniformly distributed
 
 ## Authors
 Bo Zhang (zhang_bo3 at lilly.com)
+
 Jie Xue  (xue_jie at lilly.com)
+
 Haoda Fu (fu_haoda at lilly.com)
 
 
