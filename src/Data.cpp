@@ -211,8 +211,9 @@ void Data::setCutMasks(size_t vIdx) {
     // element in the unique set. For each integer, if the number of 1 bits is
     // no more than half of p, it then represents a valid cut, and the subset
     // consists of the elements corresponding to the 1 bits in the integer.
-    size_t max = 1 << (uniqNom_[vIdx - nCont_ - nOrd_].size());
-    size_t half = max / 2;
+    size_t p = uniqNom_[vIdx - nCont_ - nOrd_].size();
+    size_t max = 1 << p;
+    size_t half = p / 2; 
 
     for (size_t value = 0; value < max; ++value) {
       std::bitset<64> subset(value);
