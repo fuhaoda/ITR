@@ -231,7 +231,7 @@ void Data::setCutMasks(size_t vIdx) {
 
 void Data::cutInfo(size_t vIdx, size_t cIdx, bool m) const {
   if (vIdx < nCont_ + nOrd_) {
-    std::cout << "  X" << vIdx << (m ? " >= " : " < ")
+    std::cout << "  X" << vIdx << (m ? " > " : " <= ")
               << cMask_[vIdx].value[cIdx] << "\n";
   } else {
     std::cout << "  X" << vIdx << (m ? " not in " : " in ") << "{";
