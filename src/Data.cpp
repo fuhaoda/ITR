@@ -10,8 +10,8 @@
 
 namespace ITR {
 
-Data::Data(std::string input) {
-  struct stat buffer;
+Data::Data(std::string const & input) {
+  struct stat buffer{};
   if (stat(input.c_str(), &buffer) != 0)
     throw "Input file does not exist!";
   
@@ -20,7 +20,7 @@ Data::Data(std::string input) {
   loadCSV(input); 
 } 
 
-void Data::loadCSV(std::string input) {
+void Data::loadCSV(std::string const & input) {
   // Open the input CSV file
   std::ifstream infile(input);
 
@@ -45,7 +45,7 @@ void Data::loadCSV(std::string input) {
   parseRawData(cont, ord, nom); 
 }
 
-void Data::parseCSVHeader(std::ifstream &infile) {
+void Data::parseCSVHeader(std::ifstream  &infile) {
   // This function counts the number of continuous, ordinal, nominal variables,
   // and the number of actions and responses.
   std::string line;
@@ -54,20 +54,19 @@ void Data::parseCSVHeader(std::ifstream &infile) {
 
   getline(infile, line);
   ss.str(line);
-
+  nCont_=nOrd_=nNom_=nResp_=0;
   while (ss.good()) {
     getline(ss, field, ',');
 
     // Convert field to all CAPS     
     std::transform(field.begin(), field.end(), field.begin(), ::toupper); 
-    
     if (field.find("CONT") != std::string::npos) {
       nCont_++; 
     } else if (field.find("ORD") != std::string::npos) {
       nOrd_++;
     } else if (field.find("NOM") != std::string::npos) {
       nNom_++; 
-    } else if (field.find("Y") != std::string::npos) {
+    } else if (field.find('Y') != std::string::npos) {
       nResp_++;
     }
   }

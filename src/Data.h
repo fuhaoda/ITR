@@ -11,7 +11,7 @@ namespace ITR {
 class Data {
 public:
   // Constructor
-  Data(std::string input);
+  explicit Data(std::string const & input);
 
   // Return the number of sample size 
   size_t nSample() const { return nSample_; } 
@@ -37,7 +37,7 @@ public:
   // Return the ith component of the jth response vector 
   double resp(size_t i, size_t j) const { return resp_[i * nResp_ + j]; }
 
-  // Return the ith componet of the jth action vector 
+  // Return the ith component of the jth action vector
   int act(size_t i) const { return act_[i]; } 
 
   // Return the ith component of the jth covariate vector
@@ -85,9 +85,12 @@ private:
   std::vector<int> id_; 
   
   // Response matrix Y[nSample_][nResp_]
+  //Current implementation Y is a vector.
+  //Y can be matrix, such as survival outcomes, incorporate multi-dimension measurements
   std::vector<double> resp_; 
   
-  // Action matrix A[nSample_][nAct_];
+  // Action vector A[nSample_];
+  // We focus on the case of developing one optimal action each time
   std::vector<int> act_; 
 
   // Covariate matrix X[nCont_ + nOrd_ + nNom_][nSample_]. The different storage
@@ -101,12 +104,12 @@ private:
   // are in consecutive columns. It also assumes that the fields are given in
   // the order of subjectID, continuous variable, ordinal variable, nominal
   // variable, action, and responses. 
-  void loadCSV(std::string input); 
+  void loadCSV(std::string  const & input);
 
   // This function parses the header of the input file. It counts the number of
-  // continuous, ordinal, and nominal variables, the number of differnet types
+  // continuous, ordinal, and nominal variables, the number of different types
   // of actions and responses. 
-  void parseCSVHeader(std::ifstream &infile); 
+  void parseCSVHeader(std::ifstream  & infile);
 
   // This function reads the raw data of the input file. Covariates are read
   // into temporary buffer while actions and responses are read into the

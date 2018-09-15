@@ -19,13 +19,14 @@ SearchEngine::SearchEngine(unsigned depth, const Data *data) {
 }
 
 void SearchEngine::setSearchChoices() {
+//Todo: potentially, we can make this as a recursive call to use depth as a parameter.
   auto nVar = data_->nVar();
 
   if (depth_ == 1) {
     for (size_t i = 0; i < nVar; ++i) {
       auto nCut = data_->nCut(i);
       for (size_t j = 0; j < nCut; ++j) {
-        Meta record;
+        Meta record{};
         record.vIdx.push_back(i);
         record.cIdx.push_back(j);
         log_.push_back(std::move(record));
@@ -38,7 +39,7 @@ void SearchEngine::setSearchChoices() {
         auto nCut2 = data_->nCut(i2);
         for (size_t j1 = 0; j1 < nCut1; ++j1) {
           for (size_t j2 = 0; j2 < nCut2; ++j2) {
-            Meta record;
+            Meta record{};
             record.vIdx.push_back(i1);
             record.vIdx.push_back(i2);
             record.cIdx.push_back(j1);
@@ -58,7 +59,7 @@ void SearchEngine::setSearchChoices() {
           for (size_t j1 = 0; j1 < nCut1; ++j1) {
             for (size_t j2 = 0; j2 < nCut2; ++j2) {
               for (size_t j3 = 0; j3 < nCut3; ++j3) {
-                Meta record;
+                Meta record{};
                 record.vIdx.push_back(i1);
                 record.vIdx.push_back(i2);
                 record.vIdx.push_back(i3);
@@ -133,7 +134,7 @@ void SearchEngine::worker(size_t tid, unsigned nThreads) {
       const auto mask = data_->cutMask(log_[i].vIdx[0], log_[i].cIdx[0]);
 
       for (size_t j = 0; j < nSample; ++j) 
-      v[2 * mask[j] + data_->act(j)] += data_->resp(j, 0);
+        v[2 * mask[j] + data_->act(j)] += data_->resp(j, 0);
       
 
       v[0] = v[1] - v[0];

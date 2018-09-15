@@ -29,7 +29,7 @@ private:
   const Data *data_; 
 
   struct Meta {
-    // Chices of variables used in the search    
+    // Choices of variables used in the search
     std::vector<size_t> vIdx;
 
     // Choices of cuts used in the search
