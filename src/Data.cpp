@@ -10,7 +10,7 @@
 
 namespace ITR {
 
-Data::Data(std::string const & input) {
+Data::Data(const std::string &input) {
   struct stat buffer{};
   if (stat(input.c_str(), &buffer) != 0)
     throw "Input file does not exist!";
@@ -20,7 +20,7 @@ Data::Data(std::string const & input) {
   loadCSV(input); 
 } 
 
-void Data::loadCSV(std::string const & input) {
+void Data::loadCSV(const std::string &input) {
   // Open the input CSV file
   std::ifstream infile(input);
 
@@ -32,6 +32,7 @@ void Data::loadCSV(std::string const & input) {
   std::vector<std::vector<int>> ord(nOrd_);
   std::vector<std::vector<int>> nom(nNom_);
 
+  decile_.resize(nCont_); 
   uniqOrd_.resize(nOrd_);
   uniqNom_.resize(nNom_); 
   
@@ -45,7 +46,7 @@ void Data::loadCSV(std::string const & input) {
   parseRawData(cont, ord, nom); 
 }
 
-void Data::parseCSVHeader(std::ifstream  &infile) {
+void Data::parseCSVHeader(std::ifstream &infile) {
   // This function counts the number of continuous, ordinal, nominal variables,
   // and the number of actions and responses.
   std::string line;
@@ -54,7 +55,7 @@ void Data::parseCSVHeader(std::ifstream  &infile) {
 
   getline(infile, line);
   ss.str(line);
-  nCont_=nOrd_=nNom_=nResp_=0;
+
   while (ss.good()) {
     getline(ss, field, ',');
 
@@ -138,7 +139,7 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
   
   // Parse continuous variables and set up cut masks
   for (size_t i = 0; i < nCont_; ++i) 
-    convertContToDeciles(cont[i]);
+    convertContToDeciles(cont[i], decile_[i]);
 
   // Parse ordinal variables
   for (size_t i = 0; i < nOrd_; ++i)
@@ -229,7 +230,10 @@ void Data::setCutMasks(size_t vIdx) {
 }
 
 void Data::cutInfo(size_t vIdx, size_t cIdx, bool m) const {
-  if (vIdx < nCont_ + nOrd_) {
+  if (vIdx < nCont_) {
+    std::cout << "  X" << vIdx << (m ? " >= " : " < ")
+              << decile_[vIdx][cIdx] << "\n";
+  } else if (vIdx < nCont_ + nOrd_) {
     std::cout << "  X" << vIdx << (m ? " >= " : " < ")
               << cMask_[vIdx].value[cIdx] << "\n";
   } else {
