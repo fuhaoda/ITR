@@ -7,7 +7,7 @@
 namespace ITR {
 
 // This function converts the value of continuous variables into deciles
-void convertContToDeciles(std::vector<double> &cont);
+void convertContToDeciles(std::vector<double> &cont, std::vector<double> &decile);
 
 // This function converts the value of ordinal variables into ranks within the
 // unique set, where the rank starts from 0  
