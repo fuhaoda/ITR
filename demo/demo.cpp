@@ -13,7 +13,7 @@ void printUsage(char *program) {
 
 int main(int argc, char **argv) {
   std::string ifile{"sample100.csv"};
-  unsigned nThreads = 6;
+  unsigned nThreads = 1;
   unsigned nTop = 5; 
 
   // Parse command line
