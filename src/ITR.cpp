@@ -4,11 +4,10 @@
 #include "Data.h"
 #include "SearchEngine.h"
 
-
-std::unique_ptr<ITR::Data> data;
-std::unique_ptr<ITR::SearchEngine> engine; 
-
 namespace ITR {
+
+std::unique_ptr<Data> data;
+std::unique_ptr<SearchEngine> engine; 
 
 ITR::ITR(std::string input, unsigned depth) {
   // Load the input file

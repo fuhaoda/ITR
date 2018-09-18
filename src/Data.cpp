@@ -10,8 +10,8 @@
 
 namespace ITR {
 
-Data::Data(std::string input) {
-  struct stat buffer;
+Data::Data(const std::string &input) {
+  struct stat buffer{};
   if (stat(input.c_str(), &buffer) != 0)
     throw "Input file does not exist!";
   
@@ -20,7 +20,7 @@ Data::Data(std::string input) {
   loadCSV(input); 
 } 
 
-void Data::loadCSV(std::string input) {
+void Data::loadCSV(const std::string &input) {
   // Open the input CSV file
   std::ifstream infile(input);
 
@@ -32,6 +32,7 @@ void Data::loadCSV(std::string input) {
   std::vector<std::vector<int>> ord(nOrd_);
   std::vector<std::vector<int>> nom(nNom_);
 
+  decile_.resize(nCont_); 
   uniqOrd_.resize(nOrd_);
   uniqNom_.resize(nNom_); 
   
@@ -60,14 +61,13 @@ void Data::parseCSVHeader(std::ifstream &infile) {
 
     // Convert field to all CAPS     
     std::transform(field.begin(), field.end(), field.begin(), ::toupper); 
-    
     if (field.find("CONT") != std::string::npos) {
       nCont_++; 
     } else if (field.find("ORD") != std::string::npos) {
       nOrd_++;
     } else if (field.find("NOM") != std::string::npos) {
       nNom_++; 
-    } else if (field.find("Y") != std::string::npos) {
+    } else if (field.find('Y') != std::string::npos) {
       nResp_++;
     }
   }
@@ -139,7 +139,7 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
   
   // Parse continuous variables and set up cut masks
   for (size_t i = 0; i < nCont_; ++i) 
-    convertContToDeciles(cont[i]);
+    convertContToDeciles(cont[i], decile_[i]);
 
   // Parse ordinal variables
   for (size_t i = 0; i < nOrd_; ++i)
@@ -230,8 +230,11 @@ void Data::setCutMasks(size_t vIdx) {
 }
 
 void Data::cutInfo(size_t vIdx, size_t cIdx, bool m) const {
-  if (vIdx < nCont_ + nOrd_) {
-    std::cout << "  X" << vIdx << (m ? " > " : " <= ")
+  if (vIdx < nCont_) {
+    std::cout << "  X" << vIdx << (m ? " >= " : " < ")
+              << decile_[vIdx][cIdx] << "\n";
+  } else if (vIdx < nCont_ + nOrd_) {
+    std::cout << "  X" << vIdx << (m ? " >= " : " < ")
               << cMask_[vIdx].value[cIdx] << "\n";
   } else {
     std::cout << "  X" << vIdx << (m ? " not in " : " in ") << "{";

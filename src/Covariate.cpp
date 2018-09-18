@@ -21,12 +21,32 @@ std::vector<std::size_t> sort_indices(const std::vector<T> &v) {
   return idx;
 }
 
-void convertContToDeciles(std::vector<double> &cont) {
+void convertContToDeciles(std::vector<double> &cont,
+                          std::vector<double> &decile) {
+  decile.resize(10); 
+  
   auto nSample = cont.size();
   const double scaling_factor = 10.0 / nSample;
 
   // Sort the continuous variable and return the indices
-  auto sorted = sort_indices(cont); 
+  auto sorted = sort_indices(cont);
+
+  for (size_t i = 0; i < 9; i++) {
+    double val = (i + 1) * nSample / 10.0 + 0.5;
+
+    // Get the integral and fractional parts
+    size_t k = static_cast<size_t>(val);
+    double f = val - k;
+
+    // Gee the values
+    double xk = cont[sorted[k]];
+    double xk1 = cont[sorted[k + 1]];
+
+    decile[i] = (1 - f) * xk + f * xk1;
+  }
+
+  // Store the maximum value 
+  decile[9] = cont[sorted[nSample - 1]];     
   
   // Replace the value of the continuous variable with the decile
   for (size_t i = 0; i < nSample; ++i) {
