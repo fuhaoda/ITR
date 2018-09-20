@@ -6,21 +6,6 @@
 
 namespace ITR {
 
-// Sort an input array and keep tracking of index
-// https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
-template <typename T>
-std::vector<std::size_t> sort_indices(const std::vector<T> &v) {
-  // Initialize original index locations
-  std::vector<size_t> idx(v.size());
-  std::iota(idx.begin(), idx.end(), 0);
-
-  // Sort indices based on comparing values in v
-  std::sort(idx.begin(), idx.end(),
-            [&v](std::size_t i1, std::size_t i2) {return v[i1] < v[i2];});
-
-  return idx;
-}
-
 void convertContToDeciles(std::vector<double> &cont,
                           std::vector<double> &decile) {
   decile.resize(10); 
@@ -28,8 +13,11 @@ void convertContToDeciles(std::vector<double> &cont,
   auto nSample = cont.size();
   const double scaling_factor = 10.0 / nSample;
 
-  // Sort the continuous variable and return the indices
-  auto sorted = sort_indices(cont);
+  // Sort the continuous variable in ascending order  
+  std::vector<size_t> sorted(nSample);
+  std::iota(sorted.begin(), sorted.end(), 0);
+  std::sort(sorted.begin(), sorted.end(),
+            [&](size_t i1, size_t i2) { return cont[i1] < cont[i2]; });
 
   for (size_t i = 0; i < 9; i++) {
     double val = (i + 1) * nSample / 10.0 + 0.5;
@@ -39,8 +27,8 @@ void convertContToDeciles(std::vector<double> &cont,
     double f = val - k;
 
     // Gee the values
-    double xk = cont[sorted[k]];
-    double xk1 = cont[sorted[k + 1]];
+    double xk = cont[sorted[k - 1]];
+    double xk1 = cont[sorted[k]];
 
     decile[i] = (1 - f) * xk + f * xk1;
   }

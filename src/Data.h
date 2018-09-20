@@ -35,7 +35,7 @@ public:
   double T0() const { return T0_; }
   
   // Return the ith component of the jth response vector 
-  double resp(size_t i, size_t j) const { return resp_[i * nResp_ + j]; }
+  double resp(size_t i, size_t j = 0) const { return resp_[i * nResp_ + j]; }
 
   // Return the ith component of the jth action vector
   int act(size_t i) const { return act_[i]; } 
@@ -74,6 +74,9 @@ private:
   size_t nVar_ = 0;    // Number of variables 
   size_t nResp_ = 0;   // Number of differnet responses 
   double T0_ = 0.0;    // Sum (Resp | Act = 0) 
+   
+  // Array of subject ID
+  std::vector<int> id_; 
 
   // Decile values of each continuous variable
   std::vector<std::vector<double>> decile_; 
@@ -83,9 +86,14 @@ private:
 
   // Unique values of each nominal variable  
   std::vector<std::set<int>> uniqNom_; 
-   
-  // Array of subject ID
-  std::vector<int> id_; 
+
+  // Covariate matrix X[nCont_ + nOrd_ + nNom_][nSample_]. The different storage
+  // layout is to faciliate the access pattern of the comprehensive search. 
+  std::vector<int> cvar_;
+  
+  // Action vector A[nSample_];
+  // We focus on the case of developing one optimal action each time
+  std::vector<int> act_; 
   
   // Response matrix Y[nSample_][nResp_]
   // Y can be a matrix, such as survival outcomes, incorporate multi-dimensional
@@ -94,15 +102,10 @@ private:
   // Y is a matrix. However, the computation involved treats Y as if it is a
   // single column vector. 
   std::vector<double> resp_; 
+
+  // Probability of P(A = 1 | X) 
+  std::vector<double> prob_; 
   
-  // Action vector A[nSample_];
-  // We focus on the case of developing one optimal action each time
-  std::vector<int> act_; 
-
-  // Covariate matrix X[nCont_ + nOrd_ + nNom_][nSample_]. The different storage
-  // layout is to faciliate the access pattern of the comprehensive search. 
-  std::vector<int> cvar_;
-
   // Cut and mask information for each variable
   std::vector<Meta> cMask_;   
 
@@ -110,12 +113,12 @@ private:
   // are in consecutive columns. It also assumes that the fields are given in
   // the order of subjectID, continuous variable, ordinal variable, nominal
   // variable, action, and responses. 
-  void loadCSV(const std::string  &input);
+  void loadCSV(const std::string &input);
 
   // This function parses the header of the input file. It counts the number of
   // continuous, ordinal, and nominal variables, the number of different types
   // of actions and responses. 
-  void parseCSVHeader(std::ifstream  &infile);
+  void parseCSVHeader(std::ifstream &infile);
 
   // This function reads the raw data of the input file. Covariates are read
   // into temporary buffer while actions and responses are read into the

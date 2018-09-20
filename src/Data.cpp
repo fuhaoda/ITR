@@ -116,7 +116,6 @@ void Data::loadRawData(std::ifstream &infile,
     }
 
     // Read action
-    // TODO: handle generic case other than 0-1 boolean 
     getline(ss, field, ',');
     act_.push_back(stoi(field));
 
@@ -125,16 +124,20 @@ void Data::loadRawData(std::ifstream &infile,
       getline(ss, field, ',');
       resp_.push_back(stod(field));
     }
+
+    // Read P(A = 1| X)
+    getline(ss, field, ',');
+    prob_.push_back(stod(field)); 
   }
 }
 
 void Data::parseRawData(std::vector<std::vector<double>> &cont,
                         std::vector<std::vector<int>> &ord,
                         std::vector<std::vector<int>> &nom) {
-  // Set up T0
+  // Compute "scaled" response: Y / P(A | X) and T0
   for (size_t i = 0; i < nSample_; ++i) {
-    if (!act_[i])
-      T0_ += resp_[i * nResp_];
+    resp_[i * nResp_] /= (act_[i] ? prob_[i] : 1 - prob_[i]);
+    T0_ += resp_[i * nResp_] * (1 - act_[i]);
   }
   
   // Parse continuous variables and set up cut masks
@@ -231,13 +234,13 @@ void Data::setCutMasks(size_t vIdx) {
 
 void Data::cutInfo(size_t vIdx, size_t cIdx, bool m) const {
   if (vIdx < nCont_) {
-    std::cout << "  X" << vIdx << (m ? " >= " : " < ")
+    std::cout << "  X" << vIdx << (m ? " < " : " >= ")
               << decile_[vIdx][cIdx] << "\n";
   } else if (vIdx < nCont_ + nOrd_) {
-    std::cout << "  X" << vIdx << (m ? " >= " : " < ")
+    std::cout << "  X" << vIdx << (m ? " < " : " >= ")
               << cMask_[vIdx].value[cIdx] << "\n";
   } else {
-    std::cout << "  X" << vIdx << (m ? " not in " : " in ") << "{";
+    std::cout << "  X" << vIdx << (m ? " in " : " not in ") << "{";
     auto subset = cMask_[vIdx].value[cIdx];
 
     if (subset == 0) {

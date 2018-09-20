@@ -2,7 +2,8 @@
 #include <algorithm>
 #include <chrono>
 #include <iomanip>
-#include <thread> 
+#include <thread>
+#include <numeric> 
 #include "SearchEngine.h"
 
 namespace ITR {
@@ -14,42 +15,61 @@ SearchEngine::SearchEngine(unsigned depth, const Data *data) {
   depth_ = depth;
   data_ = data;
 
-  // Set all the possible search choices
+  // Compute the total number of searches to examine
+  size_t totalChoices = 0;
+  auto nVar = data_->nVar(); 
+  for (size_t i = 0; i < nVar; ++i)
+    totalChoices += nChoices(i, nVar, depth_);
+
+  // Resize choices and results buffers
+  choices_.resize(totalChoices);
+  results_.resize(totalChoices * (1 << depth_)); 
+
+  // Set all the search choices
   setSearchChoices(); 
 }
 
+size_t SearchEngine::nChoices(size_t i1, size_t max, size_t d) {
+  if (d == 1) {
+    return data_->nCut(i1);
+  } else {
+    size_t total = 0;
+    for (size_t j = i1 + 1; j < max; ++j)
+      total += nChoices(j, max, d - 1);
+    return total * data_->nCut(i1); 
+  }
+}
+
 void SearchEngine::setSearchChoices() {
-//Todo: potentially, we can make this as a recursive call to use depth as a parameter.
   auto nVar = data_->nVar();
+  size_t iter = 0; 
 
   if (depth_ == 1) {
     for (size_t i = 0; i < nVar; ++i) {
       auto nCut = data_->nCut(i);
       for (size_t j = 0; j < nCut; ++j) {
-        Meta record{};
-        record.vIdx.push_back(i);
-        record.cIdx.push_back(j);
-        log_.push_back(std::move(record));
+        choices_[iter].vIdx.push_back(i);
+        choices_[iter].cIdx.push_back(j); 
+        iter++; 
       }
     }
   } else if (depth_ == 2) {
     for (size_t i1 = 0; i1 < nVar; ++i1) {
-      auto nCut1 = data_->nCut(i1); 
+      auto nCut1 = data_->nCut(i1);
       for (size_t i2 = i1 + 1; i2 < nVar; ++i2) {
         auto nCut2 = data_->nCut(i2);
         for (size_t j1 = 0; j1 < nCut1; ++j1) {
           for (size_t j2 = 0; j2 < nCut2; ++j2) {
-            Meta record{};
-            record.vIdx.push_back(i1);
-            record.vIdx.push_back(i2);
-            record.cIdx.push_back(j1);
-            record.cIdx.push_back(j2);
-            log_.push_back(std::move(record));
+            choices_[iter].vIdx.push_back(i1);
+            choices_[iter].vIdx.push_back(i2);
+            choices_[iter].cIdx.push_back(j1);
+            choices_[iter].cIdx.push_back(j2);
+            iter++; 
           }
         }
       }
-    }  
-  } else { // depth == 3
+    }
+  } else {
     for (size_t i1 = 0; i1 < nVar; ++i1) {
       auto nCut1 = data_->nCut(i1); 
       for (size_t i2 = i1 + 1; i2 < nVar; ++i2) {
@@ -59,27 +79,24 @@ void SearchEngine::setSearchChoices() {
           for (size_t j1 = 0; j1 < nCut1; ++j1) {
             for (size_t j2 = 0; j2 < nCut2; ++j2) {
               for (size_t j3 = 0; j3 < nCut3; ++j3) {
-                Meta record{};
-                record.vIdx.push_back(i1);
-                record.vIdx.push_back(i2);
-                record.vIdx.push_back(i3);
-                record.cIdx.push_back(j1);
-                record.cIdx.push_back(j2);
-                record.cIdx.push_back(j3);
-                log_.push_back(std::move(record));
+                choices_[iter].vIdx.push_back(i1);
+                choices_[iter].vIdx.push_back(i2);
+                choices_[iter].vIdx.push_back(i3);
+                choices_[iter].cIdx.push_back(j1);
+                choices_[iter].cIdx.push_back(j2);
+                choices_[iter].cIdx.push_back(j3);
+                iter++; 
               }
             }
           }
         }
       }
     }
-  }
+  }               
 }
 
 void SearchEngine::run(unsigned nThreads) {  
-  // TODO: EXTENSION NEEDED
-  // The origianl code assumes that action and response are column vectors. Only
-  // action[i][0] and response[i][0] are used for each row.
+  // TODO: Reponse is currently used only as a column vector, EXTENSION NEEDED
 
   // Get number of cores
   unsigned nCores = std::thread::hardware_concurrency();
@@ -107,7 +124,7 @@ void SearchEngine::run(unsigned nThreads) {
 
 void SearchEngine::setRange(size_t tid, unsigned nThreads,
                             size_t &first, size_t &last) {
-  auto nChoice = log_.size();
+  auto nChoice = choices_.size();     
   auto choicePerThread = nChoice / nThreads;
   auto remainder = nChoice % nThreads;
 
@@ -123,92 +140,85 @@ void SearchEngine::setRange(size_t tid, unsigned nThreads,
 void SearchEngine::worker(size_t tid, unsigned nThreads) {
   size_t first = 0, last = 0;
   setRange(tid, nThreads, first, last); 
-
   auto nSample = data_->nSample(); 
-  auto T0 = data_->T0();
-  auto scaling_factor = 2.0 / nSample;
-
+  size_t stride = 1 << depth_; 
+  
   if (depth_ == 1) {
     for (size_t i = first; i < last; ++i) {
       double v[4] = {0.0};
-      const auto mask = data_->cutMask(log_[i].vIdx[0], log_[i].cIdx[0]);
+      double *ans = results_.data() + i * stride;
+      const auto m = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
 
-      for (size_t j = 0; j < nSample; ++j) 
-        v[2 * mask[j] + data_->act(j)] += data_->resp(j, 0);
-      
+      for (size_t j = 0; j < nSample; ++j)
+        v[2 * m[j] + data_->act(j)] += data_->resp(j);
 
-      v[0] = v[1] - v[0];
-      v[1] = v[3] - v[2];
-      
-      if (v[0] < v[1]) {
-        log_[i].result = (v[0] + T0) * scaling_factor;
-        log_[i].rank = 0;
-      } else {
-        log_[i].result = (v[1] + T0) * scaling_factor;
-        log_[i].rank = 1;
-      }
+      ans[0] = v[1] - v[0];
+      ans[1] = v[3] - v[2]; 
     }
   } else if (depth_ == 2) {
     for (size_t i = first; i < last; ++i) {
       double v[8] = {0.0};
-      const auto mask1 = data_->cutMask(log_[i].vIdx[0], log_[i].cIdx[0]);
-      const auto mask2 = data_->cutMask(log_[i].vIdx[1], log_[i].cIdx[1]);
-      
-      for (size_t j = 0; j < nSample; ++j) 
-        v[4 * mask1[j] + 2 * mask2[j] + data_->act(j)] += data_->resp(j, 0);
+      double *ans = results_.data() + i * stride;
+      const auto m1 = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
+      const auto m2 = data_->cutMask(choices_[i].vIdx[1], choices_[i].cIdx[1]);
 
-      v[0] = v[1] - v[0];
-      v[1] = v[3] - v[2];
-      v[2] = v[5] - v[4];
-      v[3] = v[7] - v[6];
-      
-      const auto ptr = std::max_element(v, v + 4);
-      log_[i].result = (*ptr + T0) * scaling_factor;
-      log_[i].rank = ptr - v; 
+      for (size_t j = 0; j < nSample; ++j)
+        v[4 * m1[j] + 2 * m2[j] + data_->act(j)] += data_->resp(j);
+
+      ans[0] = v[1] - v[0];
+      ans[1] = v[3] - v[2];
+      ans[2] = v[5] - v[4];
+      ans[3] = v[7] - v[6]; 
     }  
   } else { // depth_ == 3
     for (size_t i = first; i < last; ++i) {
       double v[16] = {0.0};
-      const auto mask1 = data_->cutMask(log_[i].vIdx[0], log_[i].cIdx[0]);
-      const auto mask2 = data_->cutMask(log_[i].vIdx[1], log_[i].cIdx[1]);
-      const auto mask3 = data_->cutMask(log_[i].vIdx[2], log_[i].cIdx[2]); 
-      
-      for (size_t j = 0; j < nSample; ++j) 
-        v[8 * mask1[j] + 4 * mask2[j] + 2 * mask3[j] + data_->act(j)] +=
-          data_->resp(j, 0);
+      double *ans = results_.data() + i * stride;
+      const auto m1 = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
+      const auto m2 = data_->cutMask(choices_[i].vIdx[1], choices_[i].cIdx[1]);
+      const auto m3 = data_->cutMask(choices_[i].vIdx[2], choices_[i].cIdx[2]);
 
-      v[0] = v[1] - v[0];
-      v[1] = v[3] - v[2];
-      v[2] = v[5] - v[4];
-      v[3] = v[7] - v[6];
-      v[4] = v[9] - v[8];
-      v[5] = v[11] - v[10];
-      v[6] = v[13] - v[12];
-      v[7] = v[15] - v[14];
-      
-      const auto ptr = std::max_element(v, v + 8);
-      log_[i].result = (*ptr + T0) * scaling_factor;
-      log_[i].rank = ptr - v; 
+      for (size_t j = 0; j < nSample; ++j)
+        v[8 * m1[j] + 4 * m2[j] + 2 * m3[j] + data_->act(j)] += data_->resp(j); 
+
+      ans[0] = v[1] - v[0];
+      ans[1] = v[3] - v[2];
+      ans[2] = v[5] - v[4];
+      ans[3] = v[7] - v[6];
+      ans[4] = v[9] - v[8];
+      ans[5] = v[11] - v[10];
+      ans[6] = v[13] - v[12];
+      ans[7] = v[15] - v[14]; 
     }  
-  }
+  }        
 }
 
-
 void SearchEngine::report(size_t nTop) {
-  // Cap nTop 
-  if (nTop > log_.size())
-    nTop = log_.size();
+  // Cap nTop
+  if (nTop > choices_.size())
+    nTop = choices_.size(); 
 
-  // Sort the logs based on comparing values in result
-  std::sort(log_.begin(), log_.end(),
-            [](Meta &d1, Meta &d2) {return d1.result > d2.result;});
+  double T0 = data_->T0();
+  double scale = 1.0 / data_->nSample(); 
 
+  // Sort the search results in decending order. 
+  std::vector<size_t> index(results_.size());
+  std::iota(index.begin(), index.end(), 0);
+  std::sort(index.begin(), index.end(),
+            [&](size_t i1, size_t i2) {return results_[i1] > results_[i2];});
+
+  
   for (size_t i = 0; i < nTop; ++i) {
-    std::cout << "Value is " << std::scientific << log_[i].result
-              << ", obtained from\n";
+    // Each variable and cut combination corresponds to 2^depth searches
+    size_t sID = index[i];              // search ID
+    size_t cID = sID / (1 << depth_);   // choice ID
+    size_t mask = sID % (1 << depth_);  // mask for cut direction
+    
+    std::cout << "Value = " << std::scientific
+              << (T0 + results_[index[i]]) * scale << "\n"; 
     for (auto d = 0; d < depth_; ++d) {
-      data_->cutInfo(log_[i].vIdx[d], log_[i].cIdx[d],
-                     log_[i].rank & (1 << (depth_ - 1 - d)));
+      data_->cutInfo(choices_[cID].vIdx[d], choices_[cID].cIdx[d],
+                     mask & (1 << (depth_ - 1 - d)));
     }
   }
 }

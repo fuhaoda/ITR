@@ -1,4 +1,4 @@
-# ITR (Individual Treatment Recommendation) 
+# ITR (Individualized Treatment Recommendation) 
 
 ITR is a library implementing the framework described in the paper _Estimating
   Optimal Treatment Regimes via Subgroup Identification in Randomized Control
@@ -57,7 +57,8 @@ Inside `main`, an `ITR::ITR` instance is created by passing two arguments to its
 For the csv input file, the first line must be a header. The first column is the
   subject identifier, followed by continuous variables (labeled as cont*),
   ordinal variables (labeled as ord*), nominal variables (nom*), actions (A*),
-  and responses (Y*). The ITR library is case insensitive to these labels.
+  responses (Y*), and condition probablity P(A = 1 | X). The ITR library is case
+  insensitive to these labels. 
 
 For the search depth, the valid values are 1, 2, and 3.   
 
@@ -100,30 +101,30 @@ Creating search engine with depth 3
 Searching 86131 choices ...
 Completed in 1.102359e-02 seconds using 8 threads
 Best 5 results: ...
-Value is 6.884978e+01, obtained from
-  X1 >= 4
-  X2 < 1
-  X7 in {0, 2} 
-Value is 6.787278e+01, obtained from
-  X1 >= 5
-  X6 in {2, 3} 
-  X7 in {2, 3} 
-Value is 6.744488e+01, obtained from
-  X1 >= 4
-  X7 in {0, 2} 
-  X8 in {2} 
-Value is 6.742991e+01, obtained from
-  X1 >= 3
-  X5 >= 3
-  X6 in {2, 3} 
-Value is 6.740870e+01, obtained from
-  X1 >= 4
-  X6 in {0, 2} 
-  X8 in {2} 
+Value = 6.884978e+01
+  X1 < 5.094425e+01
+  X2 >= 5.253060e+01
+  X7 not in {0, 2} 
+Value = 6.787278e+01
+  X1 < 5.942735e+01
+  X6 not in {2, 3} 
+  X7 not in {2, 3} 
+Value = 6.744488e+01
+  X1 < 5.094425e+01
+  X7 not in {0, 2} 
+  X8 not in {2} 
+Value = 6.742991e+01
+  X1 < 4.372625e+01
+  X5 < 3
+  X6 not in {2, 3} 
+Value = 6.740870e+01
+  X1 < 5.094425e+01
+  X6 not in {0, 2} 
+  X8 not in {2} 
 ```
 
 The `demo` directory also contains three additional source files
-  `SimulationData.h`, `SimluationData.cpp`, and `genData.cpp`. They can be built
+  `SimulationData.h`, `SimluationData.cpp`, and `genData.cpp`. They can be built 
   into a utility routine to generate simulation data as follows  
 ```
 > cd /path/to/ITR-build/demo

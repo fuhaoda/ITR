@@ -117,7 +117,8 @@ int main(int argc, char **argv) {
   data.generateOrdVariable(genInt, lInt, uInt);
   data.generateNomVariable(genInt, lInt, uInt); 
   data.generateAct(genInt, 0, 1);
-  data.generateResp(genDouble, lDble, uDble); 
+  data.generateResp(genDouble, lDble, uDble);
+  data.generateProb(); 
 
   // Save the data into a csv file
   data.save(); 

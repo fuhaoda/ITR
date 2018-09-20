@@ -11,11 +11,19 @@ TEST(CovariateCovertTest, Cont) {
   std::vector<double> arr = {5.0, 1.0, 9.0, 3.0, 14.0, 9.0, 7.0};
   double fct = 10.0 / arr.size();
 
-  std::vector<double> expect = {2.5, 0.5, 4.5, 1.5, 6.5, 5.5, 3.5}; 
-  ITR::convertContToDeciles(arr);
+  // Expected deciles of each entry
+  std::vector<double> out1 = {2.5, 0.5, 4.5, 1.5, 6.5, 5.5, 3.5};
+  
+  // Expected deciles of the input array
+  std::vector<double> out2 = {1.4, 2.8, 4.2, 5.6, 7, 8.4, 9, 9.5, 13, 14.0}; 
 
-  for (size_t i = 0; i < arr.size(); ++i)
-    EXPECT_EQ(fct * expect[i], arr[i]) << "Values differ at index " << i;
+  std::vector<double> decile;
+  ITR::convertContToDeciles(arr, decile); 
+
+  for (size_t i = 0; i < arr.size(); ++i) {
+    EXPECT_EQ(fct * out1[i], arr[i]) << "Values differ at index " << i;
+    EXPECT_EQ(out2[i], decile[i]) << "Values differ at index " << i;
+  }
 }  
 
 TEST(CovariateCovertTest, Ord) {
@@ -47,9 +55,9 @@ TEST(CovariateConvertTest, Nom) {
 TEST(DataTest, Load) {
   ITR::Data data("sample100.csv");  
   std::vector<int> nCut = {10, 10, 10, 5, 5, 5, 16, 16, 16}; 
-  const double T0 = 2841.77937;
+  const double T0 = 5683.55874;
   const double a28 = 0;
-  const double y_r11_c0 = 12.4483;
+  const double y_r11_c0 = 24.8966;
   
   EXPECT_EQ(100, data.nSample());
   EXPECT_EQ(3, data.nCont());

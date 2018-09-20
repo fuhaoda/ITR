@@ -39,7 +39,13 @@ public:
                     double a, double b) {
     generateData<double>(resp_.get(), nResp_, func, a, b);
   }
-  
+
+  // Generate condition probability P(A = 1 | X)
+  void generateProb() {
+    for (size_t i = 0; i < nSample_; ++i)
+      prob_[i] = 0.5;
+  }
+ 
   // Save the generated data into a csv file
   void save(std::string fname = std::string{"simData.csv"}) const;   
   
@@ -55,6 +61,7 @@ private:
   std::unique_ptr<int []> nom_;     // Buffer for nominal variable
   std::unique_ptr<int []> act_;     // Buffer for action
   std::unique_ptr<double []> resp_; // Buffer for response
+  std::unique_ptr<double []> prob_; // Buffer for conditional probability
 
   template<typename T>
   void generateData(T *matrix, size_t nCol,

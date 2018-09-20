@@ -10,7 +10,8 @@ SimulationData::SimulationData(size_t nSample, size_t nCont, size_t nOrd,
   ord_ = std::unique_ptr<int []>{new int[nSample * nOrd]()};
   nom_ = std::unique_ptr<int []>{new int[nSample * nNom]()};
   act_ = std::unique_ptr<int []>{new int[nSample]()};
-  resp_ = std::unique_ptr<double []>{new double[nSample * nResp]()}; 
+  resp_ = std::unique_ptr<double []>{new double[nSample * nResp]()};
+  prob_ = std::unique_ptr<double []>{new double[nSample]()}; 
 }
 
 void SimulationData::save(std::string fname) const {
@@ -27,7 +28,7 @@ void SimulationData::save(std::string fname) const {
   ofile << "A1" << ", ";
   for (size_t i = 0; i < nResp_; ++i)
     ofile << "Y" << i + 1 << ", ";
-  ofile << "\n";
+  ofile << "P(A=1|X)" << "\n";
 
   // Write data to file
   for (size_t i = 0; i < nSample_; ++i) {
@@ -52,6 +53,9 @@ void SimulationData::save(std::string fname) const {
     // Resp
     for (size_t j = 0; j < nResp_; ++j)
       ofile << resp_[j * nSample_ + i] << ", ";
+
+    // Probability
+    ofile << prob_[i]; 
 
     // Change line
     ofile << "\n";
