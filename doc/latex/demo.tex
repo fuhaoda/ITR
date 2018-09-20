@@ -1,1 +1,67 @@
 \chapter{Usage}
+
+The package comes with a demonstration program in the {\tt demo} directory
+showing how to use the {\tt ITR} library. The  example can be built as follows
+\begin{verbatim}
+> cd /path/to/ITR-build/demo
+> make demo
+> ./demo
+\end{verbatim}
+Generally, one needs to {\tt -I/path/to/ITR-install/include/itr} and
+{\tt -L/path/to/ITR-install/lib -litr} to the compile command. 
+
+To use the library, one needs to include the header file {\tt ITR.h}. Inside
+{\tt main()}, an {\tt ITR::ITR} instance is created by passing two arguments to
+its constructor. The first argument is a {\tt std::string} object specifying the
+path to the input csv file. The second argument is an unsigned integer specifying
+the search depth. 
+
+For the csv input file, the first line must be a header. The first column is the
+subject identifier, followed by continuous variables (labeled as {\tt cont*}), ordinal
+variables (labeled as {\tt ord*}), nominal variables (labeled as {\tt nom*}),
+actions (labeled as {\tt A*}), responses (labeled as {\tt Y*}), and condition
+probablity $P(A = 1 | X)$. The ITR library is case insensitive to these labels.
+
+For the search depth, the valid values are 1, 2, and 3.   
+
+The constructor of `ITR::ITR` will throw an exception if the input file does not
+exist or the search depth is invalid. 
+
+After the instance is created, one performs the search by invoking the {\tt run}
+method. Here, one has the choice of running the search sequentially or in
+parallel by passing an {\tt unsigned} integer {\tt nThreads} to the method. If
+{\tt nThreads} is 1, the search is done sequentially. If {\tt nThreads} is greater
+than 1, the search is done in parallel. 
+
+Once the search completes, one can query the top {\tt n} results by calling the
+{\tt report} method. An sample output of the {\tt demo} program looks like the following
+\begin{verbatim}
+ > ./demo --thread=8
+ Loading input data ...
+ Creating search engine with depth 3
+ Searching 86131 choices ...
+ Completed in 1.102359e-02 seconds using 8 threads
+ Best 5 results: ...
+ Value = 6.884978e+01
+   X1 < 5.094425e+01
+   X2 >= 5.253060e+01
+   X7 not in {0, 2} 
+ Value = 6.787278e+01
+   X1 < 5.942735e+01
+   X6 not in {2, 3} 
+   X7 not in {2, 3} 
+ Value = 6.744488e+01
+   X1 < 5.094425e+01
+   X7 not in {0, 2} 
+   X8 not in {2} 
+ Value = 6.742991e+01
+   X1 < 4.372625e+01
+   X5 < 3
+   X6 not in {2, 3} 
+ Value = 6.740870e+01
+   X1 < 5.094425e+01
+   X6 not in {0, 2} 
+   X8 not in {2} 
+\end{verbatim}
+
+
