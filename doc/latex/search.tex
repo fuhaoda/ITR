@@ -1,16 +1,16 @@
 \chapter{Implementation}
 
 In the toy example in Chapter 1, doctors Adam and Barry use different threshold
-values on covariate $X$ when making their treatment recommendations. Such
-threshold value is referred to a {\it cut} in the implementation. For each
-covariate $X$ and a particular cut value $c$, there are two treatment
+values on a covariate $X_i$ when making their treatment recommendations. Such
+threshold value is referred to a {\it cut} in the implementation. Suppose the treatment recommendation is based on a single 
+covariate $X_i$ (i.e. depth is 1) and a particular cut value $c$, there are two treatment
 recommendations, 
 \begin{description}
-\item[Treatment 1] Give treatment 1 if $X < c$ and treatment 0 otherwise.
-\item[Treatment 2] Give treatment 1 if $X \geq c$ and treatment 0 otherwise. 
+\item[Recommendation 1 ($R_1$):] Give treatment 1 if $X_i < c$ and treatment 0 otherwise.
+\item[Recommendation 2 ($R_2$):] Give treatment 1 if $X_i \geq c$ and treatment 0 otherwise. 
 \end{description}
-It is easy to show that $I_{X < c} = I_{A = (X < c)}$ and
-$I_{X \geq c} = I_{A = (X \geq c)}$ In the implementation, the bitmask $I_{X<c}$
+Therefore,   $R_1=I_{X_i < c}$ and
+$R_2=I_{X_i \geq c}$. In the implementation, the bitmask $I_{X_i<c}$
 for each cut is saved.  The  search can then be implemented as follows
 
 \begin{verbatim}
@@ -57,12 +57,12 @@ computation is organized differently which we explain next.
   ]
   \node {} % Root
   % left child
-  child { node {$X<2$}
+  child { node {$X_i <2$}
     child { node {$A=1$} }
     child { node {$A=0$} }
   }
   % right child
-  child { node {$X \geq 2$}
+  child { node {$X_i \geq 2$}
     child { node {$A=1$} }
     child { node {$A=0$} }
   };
@@ -70,24 +70,24 @@ computation is organized differently which we explain next.
 \end{figure}
 
 Consider the depth one case shown in Figure~\ref{fig:depth1}. Recall that the
-bitmask of $X < 2$ is stored. For each sample $i$ being processed, there are
-four combinations depending on the value of $A$ and the bitmask $X(i) < c$. This
-means, the corresponding $Y(i)$ can be sorted into four buckets. For instance,
-the far left bucket corresponds to $X(i) < c$ and $A=1$ and can therefore be
-indexed as bucket 3 ($(11)_2$). The far right bucket can be indexed as bucket 0 (
-$(00)_2$). Let $T_0$ be
-\[
-T_0 = \sum_{i, A(i) = 0} Y(i)
-\]
-and $B_i$, $i=0,1,2,3$ denote the value accumulated in each bucket.
-Notice that
+bitmask of $X_i < 2$ is stored as a vector. For each sample $j$ being processed, there are
+four combinations depending on the value of $A_j$ and the bitmask $X_{ij} < c$. This
+means, the corresponding $Y_j$ can be sorted into four buckets. For instance,
+the far left bucket corresponds to $X_{ij} < c$ and $A_j=1$ and can therefore be
+indexed as bucket 3 (=$(11)_2$). The far right bucket can be indexed as bucket 0 (
+$=(00)_2$). 
+and $B_k$, $k=0,1,2,3$ denote the sets of $Y_j$  in each bucket and $S_{T_0}$ is a set of $Y_j$ where $j$ satisfies $A_j=0$.
+Notice that the sets have the following relationship,
 \[B_3 - B_2 + T_0 
-=  \{A = 1 \cap X < 2\} - \{A = 0 \cap X < 2\} + \{A = 0\}
-= \{A = 1 \cap X < 2\} + \{A = 0 \cap X \geq 2\}
+=  \{A = 1 \cap X_i < 2\} - \{A = 0 \cap X_i < 2\} + \{A = 0\}
+= \{A = 1 \cap X _i< 2\} + \{A = 0 \cap X_i \geq 2\}
 \]
 %
-If $X(i) < 2$, the recommendation is treatment 1, matching $A(i)$.
-If $X(i)\geq 2$, the recommendation is treatment 0, matching $A(i)$. In other
-words, the quantity $B_3 - B_2 + T_0$ gives the result for treatment $X < c$.
-Similarly, one can verify that $B_1 - B_0 + T_0$ gives the result for
-treatment $X \geq c$. 
+Let $T_0$ be
+\[
+T_0 = \sum_{j:A_j = 0} Y_j
+\]
+If the treatment recommendation is $I(X_i < 2)$, the recommendation is treatment 0, the value of $\sum_j I\{A_j=I(X_{ij}<2)\}Y_j$ can be calculated as the sum of $Y_j$ where $j \in \{B_3 - B_2 + T_0\}$.
+Similarly, one can verify that if the treatment recommendation is $I(X_i \geq 2)$, the sum can be based on the $Y_j$ where $j \in \{B_1 - B_0 + T_0\}$. 
+
+We may notice that the $\{B_3 - B_2 + T_0\}=\{B_3+B_0\}$ and $\{B_1 - B_0 + T_0\}=\{B_2+B_1\}$. Therefore, we do not need to calculate $T_i$ in this example. However, when the depth is equal to 3, the above calculation will be more efficient. 
