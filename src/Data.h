@@ -1,3 +1,10 @@
+// The input data require special format
+// ID	Cont1	Cont2	Cont3	Ord1	Ord2	Ord3	Nom1	Nom2	Nom3	A	Y	P(A=1|X)
+// The first column is ID, then followed by continous variables, ordinal categorical variable,
+// and nominal categorial variable, action, response, and probability of treatment assignment
+// We require variables start with Cont, Ord, Nom, Y for identification.
+// A is 0 and 1 variable. 0 means control and 1 denotes treatment.
+
 #ifndef __DATA_H__
 #define __DATA_H__
 
@@ -34,13 +41,16 @@ public:
   // Return the sum of (Resp | Act = 0)
   double T0() const { return T0_; }
   
-  // Return the ith component of the jth response vector 
+  // Return the ith component of the jth response vector
+  // The response is 1 dimension in current implementation, it and be extended to multi-dimension responses.
+  // Multi-dimension responses will be read by rows to improve the efficiency. Return ith sample jth response
   double resp(size_t i, size_t j = 0) const { return resp_[i * nResp_ + j]; }
 
-  // Return the ith component of the jth action vector
+  // Return the ith component of the action vector
+  // Action is a vector.
   int act(size_t i) const { return act_[i]; } 
 
-  // Return the ith component of the jth covariate vector
+  // Return the ith subject of the jth covariate. The covariate matrix is designed reading by columns to improve the efficiency.
   int cvar(size_t i, size_t j) const { return cvar_[j * nSample_ + i]; }
   
   // Return the number of cuts for variable i

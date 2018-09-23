@@ -49,6 +49,7 @@ void Data::loadCSV(const std::string &input) {
 void Data::parseCSVHeader(std::ifstream &infile) {
   // This function counts the number of continuous, ordinal, nominal variables,
   // and the number of actions and responses.
+  // it requires the input file has aligned format
   std::string line;
   std::istringstream ss;
   std::string field;
@@ -135,6 +136,7 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
                         std::vector<std::vector<int>> &ord,
                         std::vector<std::vector<int>> &nom) {
   // Compute "scaled" response: Y / P(A | X) and T0
+  // Assuming Y is a vector
   for (size_t i = 0; i < nSample_; ++i) {
     resp_[i * nResp_] /= (act_[i] ? prob_[i] : 1 - prob_[i]);
     T0_ += resp_[i * nResp_] * (1 - act_[i]);

@@ -23,7 +23,7 @@ void convertContToDeciles(std::vector<double> &cont,
     double val = (i + 1) * nSample / 10.0 + 0.5;
 
     // Get the integral and fractional parts
-    size_t k = static_cast<size_t>(val);
+    auto k = static_cast<size_t>(val);
     double f = val - k;
 
     // Gee the values

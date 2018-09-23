@@ -10,12 +10,11 @@ namespace ITR {
 class SearchEngine {
 public:
   // Constructor
-  SearchEngine(unsigned depth, const Data *data); 
+  SearchEngine(unsigned depth, const Data *data);
 
   // Return the number of searches to examine
-  size_t nChoices() const { //return log_.size(); }
-    //return choices_.size() / depth_ / 2;
-    return choices_.size(); 
+  size_t nChoices() const {
+    return choices_.size()<<depth_;
   }
 
   // Run the comprehensive search
@@ -26,8 +25,8 @@ public:
   
 private:
   // Depth of the search  
-  int depth_;
-
+  size_t depth_;
+  size_t totalChoices_{0};
   // Data associated with the search
   const Data *data_;
 
@@ -77,8 +76,9 @@ private:
 
   // This function computes the number of search choices formed by the
   // combination of variables i1, ..., id, where 0 <= i1 < i2 < ... < id < max
-  size_t nChoices(size_t i1, size_t max, size_t d); 
-  
+  void countChoices(std::vector<size_t> sofar, std::vector<size_t> rest, size_t restDepth);
+
+
   // This function is the worker function for the search
   void worker(size_t tid, unsigned nThreads);
 

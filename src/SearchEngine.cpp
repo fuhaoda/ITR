@@ -16,29 +16,36 @@ SearchEngine::SearchEngine(unsigned depth, const Data *data) {
   data_ = data;
 
   // Compute the total number of searches to examine
-  size_t totalChoices = 0;
-  auto nVar = data_->nVar(); 
-  for (size_t i = 0; i < nVar; ++i)
-    totalChoices += nChoices(i, nVar, depth_);
-
-  // Resize choices and results buffers
-  choices_.resize(totalChoices);
-  results_.resize(totalChoices * (1 << depth_)); 
+  auto nVar = data_->nVar();
+  std::vector<size_t> nCutVec(nVar);
+  totalChoices_ = 0;
+  for(size_t i=0; i < nVar; ++i){
+      nCutVec[i]=data_->nCut(i);
+  }
+  countChoices(std::vector<size_t>{}, nCutVec, depth_);
+  choices_.resize(totalChoices_);
+  results_.resize(totalChoices_<< depth_);
 
   // Set all the search choices
   setSearchChoices(); 
 }
 
-size_t SearchEngine::nChoices(size_t i1, size_t max, size_t d) {
-  if (d == 1) {
-    return data_->nCut(i1);
-  } else {
-    size_t total = 0;
-    for (size_t j = i1 + 1; j < max; ++j)
-      total += nChoices(j, max, d - 1);
-    return total * data_->nCut(i1); 
-  }
+
+void SearchEngine::countChoices(std::vector<size_t> sofar, std::vector<size_t> rest, size_t restDepth){
+    if(restDepth==0){
+        totalChoices_+=std::accumulate(sofar.begin(),sofar.end(),1, std::multiplies<>());
+    } else if(rest.size()<restDepth){
+        return;
+    } else {
+        auto sofar1=sofar;
+        sofar1.insert(sofar1.end(),rest.begin(),rest.begin()+1);
+        rest.erase(rest.begin());
+        countChoices(sofar, rest, restDepth);
+        countChoices(sofar1,rest,restDepth-1);
+    }
 }
+
+
 
 void SearchEngine::setSearchChoices() {
   auto nVar = data_->nVar();
@@ -141,13 +148,13 @@ void SearchEngine::worker(size_t tid, unsigned nThreads) {
   size_t first = 0, last = 0;
   setRange(tid, nThreads, first, last); 
   auto nSample = data_->nSample(); 
-  size_t stride = 1 << depth_; 
+  size_t stride = 1u << depth_;
   
   if (depth_ == 1) {
     for (size_t i = first; i < last; ++i) {
       double v[4] = {0.0};
       double *ans = results_.data() + i * stride;
-      const auto m = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
+      const auto & m = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
 
       for (size_t j = 0; j < nSample; ++j)
         v[2 * m[j] + data_->act(j)] += data_->resp(j);
@@ -159,8 +166,8 @@ void SearchEngine::worker(size_t tid, unsigned nThreads) {
     for (size_t i = first; i < last; ++i) {
       double v[8] = {0.0};
       double *ans = results_.data() + i * stride;
-      const auto m1 = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
-      const auto m2 = data_->cutMask(choices_[i].vIdx[1], choices_[i].cIdx[1]);
+      const auto & m1 = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
+      const auto & m2 = data_->cutMask(choices_[i].vIdx[1], choices_[i].cIdx[1]);
 
       for (size_t j = 0; j < nSample; ++j)
         v[4 * m1[j] + 2 * m2[j] + data_->act(j)] += data_->resp(j);
@@ -174,9 +181,9 @@ void SearchEngine::worker(size_t tid, unsigned nThreads) {
     for (size_t i = first; i < last; ++i) {
       double v[16] = {0.0};
       double *ans = results_.data() + i * stride;
-      const auto m1 = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
-      const auto m2 = data_->cutMask(choices_[i].vIdx[1], choices_[i].cIdx[1]);
-      const auto m3 = data_->cutMask(choices_[i].vIdx[2], choices_[i].cIdx[2]);
+      const auto & m1 = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
+      const auto & m2 = data_->cutMask(choices_[i].vIdx[1], choices_[i].cIdx[1]);
+      const auto & m3 = data_->cutMask(choices_[i].vIdx[2], choices_[i].cIdx[2]);
 
       for (size_t j = 0; j < nSample; ++j)
         v[8 * m1[j] + 4 * m2[j] + 2 * m3[j] + data_->act(j)] += data_->resp(j); 
@@ -204,7 +211,7 @@ void SearchEngine::report(size_t nTop) {
   // Sort the search results in decending order. 
   std::vector<size_t> index(results_.size());
   std::iota(index.begin(), index.end(), 0);
-  std::sort(index.begin(), index.end(),
+  std::partial_sort(index.begin(), index.begin()+nTop, index.end(),
             [&](size_t i1, size_t i2) {return results_[i1] > results_[i2];});
 
   
@@ -216,9 +223,9 @@ void SearchEngine::report(size_t nTop) {
     
     std::cout << "Value = " << std::scientific
               << (T0 + results_[index[i]]) * scale << "\n"; 
-    for (auto d = 0; d < depth_; ++d) {
+    for (auto d = 0u; d < depth_; ++d) {
       data_->cutInfo(choices_[cID].vIdx[d], choices_[cID].cIdx[d],
-                     mask & (1 << (depth_ - 1 - d)));
+                     mask & (1u << (depth_ - 1u - d)));
     }
   }
 }
