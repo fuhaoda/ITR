@@ -19,8 +19,8 @@ SearchEngine::SearchEngine(unsigned depth, const Data *data) {
   auto nVar = data_->nVar();
   std::vector<size_t> nCutVec(nVar);
   totalChoices_ = 0;
-  for(size_t i=0; i < nVar; ++i){
-      nCutVec[i]=data_->nCut(i);
+  for(size_t i=0; i < nVar; ++i) {
+    nCutVec[i]=data_->nCut(i);
   }
   countChoices(std::vector<size_t>{}, nCutVec, depth_);
   choices_.resize(totalChoices_);
@@ -31,21 +31,22 @@ SearchEngine::SearchEngine(unsigned depth, const Data *data) {
 }
 
 
-void SearchEngine::countChoices(std::vector<size_t> sofar, std::vector<size_t> rest, size_t restDepth){
-    if(restDepth==0){
-        totalChoices_+=std::accumulate(sofar.begin(),sofar.end(),1, std::multiplies<>());
-    } else if(rest.size()<restDepth){
-        return;
-    } else {
-        auto sofar1=sofar;
-        sofar1.insert(sofar1.end(),rest.begin(),rest.begin()+1);
-        rest.erase(rest.begin());
-        countChoices(sofar, rest, restDepth);
-        countChoices(sofar1,rest,restDepth-1);
-    }
+void SearchEngine::countChoices(std::vector<size_t> sofar,
+                                std::vector<size_t> rest,
+                                size_t restDepth) {
+  if(restDepth == 0){
+    totalChoices_ += std::accumulate(sofar.begin(), sofar.end(), 1,
+                                     std::multiplies<>());
+  } else if(rest.size() < restDepth){
+    return;
+  } else {
+    auto sofar1 = sofar;
+    sofar1.insert(sofar1.end(), rest.begin(), rest.begin() + 1);
+    rest.erase(rest.begin());
+    countChoices(sofar, rest, restDepth);
+    countChoices(sofar1, rest, restDepth - 1);
+  }
 }
-
-
 
 void SearchEngine::setSearchChoices() {
   auto nVar = data_->nVar();
@@ -154,7 +155,7 @@ void SearchEngine::worker(size_t tid, unsigned nThreads) {
     for (size_t i = first; i < last; ++i) {
       double v[4] = {0.0};
       double *ans = results_.data() + i * stride;
-      const auto & m = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
+      const auto &m = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
 
       for (size_t j = 0; j < nSample; ++j)
         v[2 * m[j] + data_->act(j)] += data_->resp(j);
@@ -166,8 +167,8 @@ void SearchEngine::worker(size_t tid, unsigned nThreads) {
     for (size_t i = first; i < last; ++i) {
       double v[8] = {0.0};
       double *ans = results_.data() + i * stride;
-      const auto & m1 = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
-      const auto & m2 = data_->cutMask(choices_[i].vIdx[1], choices_[i].cIdx[1]);
+      const auto &m1 = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
+      const auto &m2 = data_->cutMask(choices_[i].vIdx[1], choices_[i].cIdx[1]);
 
       for (size_t j = 0; j < nSample; ++j)
         v[4 * m1[j] + 2 * m2[j] + data_->act(j)] += data_->resp(j);
@@ -181,9 +182,9 @@ void SearchEngine::worker(size_t tid, unsigned nThreads) {
     for (size_t i = first; i < last; ++i) {
       double v[16] = {0.0};
       double *ans = results_.data() + i * stride;
-      const auto & m1 = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
-      const auto & m2 = data_->cutMask(choices_[i].vIdx[1], choices_[i].cIdx[1]);
-      const auto & m3 = data_->cutMask(choices_[i].vIdx[2], choices_[i].cIdx[2]);
+      const auto &m1 = data_->cutMask(choices_[i].vIdx[0], choices_[i].cIdx[0]);
+      const auto &m2 = data_->cutMask(choices_[i].vIdx[1], choices_[i].cIdx[1]);
+      const auto &m3 = data_->cutMask(choices_[i].vIdx[2], choices_[i].cIdx[2]);
 
       for (size_t j = 0; j < nSample; ++j)
         v[8 * m1[j] + 4 * m2[j] + 2 * m3[j] + data_->act(j)] += data_->resp(j); 
@@ -211,14 +212,13 @@ void SearchEngine::report(size_t nTop) {
   // Sort the search results in decending order. 
   std::vector<size_t> index(results_.size());
   std::iota(index.begin(), index.end(), 0);
-  std::partial_sort(index.begin(), index.begin()+nTop, index.end(),
+  std::partial_sort(index.begin(), index.begin() + nTop, index.end(),
             [&](size_t i1, size_t i2) {return results_[i1] > results_[i2];});
-
   
   for (size_t i = 0; i < nTop; ++i) {
     // Each variable and cut combination corresponds to 2^depth searches
     size_t sID = index[i];              // search ID
-    size_t cID = sID / (1 << depth_);   // choice ID
+    size_t cID = sID >> depth_;         // choice ID
     size_t mask = sID % (1 << depth_);  // mask for cut direction
     
     std::cout << "Value = " << std::scientific

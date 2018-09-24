@@ -13,9 +13,7 @@ public:
   SearchEngine(unsigned depth, const Data *data);
 
   // Return the number of searches to examine
-  size_t nChoices() const {
-    return choices_.size()<<depth_;
-  }
+  size_t nChoices() const { return choices_.size() << depth_; }
 
   // Run the comprehensive search
   void run(unsigned nThreads); 
@@ -27,6 +25,7 @@ private:
   // Depth of the search  
   size_t depth_;
   size_t totalChoices_{0};
+  
   // Data associated with the search
   const Data *data_;
 
@@ -44,39 +43,13 @@ private:
   // Values of all the search results
   std::vector<double> results_; 
 
-  
-  // // Choices of variables and cuts combination used in the search
-  // std::vector<size_t> choices_;
-
-  // // Values of the search results
-  // std::vector<double> results_; 
-
-  
-
-  // struct Meta {
-  //   // Choices of variables used in the search
-  //   std::vector<size_t> vIdx;
-
-  //   // Choices of cuts used in the search
-  //   std::vector<size_t> cIdx;
-
-  //   // Best result among the 2^(depth + 1) searches formed by the above variable
-  //   // and cut combinations
-  //   double result;
-
-  //   // Rank of the best value with the 2^(depth + 1) searches
-  //   size_t rank;
-  // };
-
-  // // Search history
-  // std::vector<Meta> log_;
-
   // This function sets all the search choices of the given depth
   void setSearchChoices(); 
 
   // This function computes the number of search choices formed by the
   // combination of variables i1, ..., id, where 0 <= i1 < i2 < ... < id < max
-  void countChoices(std::vector<size_t> sofar, std::vector<size_t> rest, size_t restDepth);
+  void countChoices(std::vector<size_t> sofar, std::vector<size_t> rest,
+                    size_t restDepth);
 
 
   // This function is the worker function for the search
