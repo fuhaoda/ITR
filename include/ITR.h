@@ -14,6 +14,7 @@ public:
   void run(unsigned nThreads = 1) const;
 
   // Display the top n search results
+  // Todo: we need to pack the results into a struct and return it.
   void report(size_t nTop = 1) const; 
 };
 

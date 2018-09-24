@@ -183,7 +183,7 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
 
 void Data::setCutMasks(size_t vIdx) {
   // Get the handle of the data
-  const auto data = cvar_.data() + vIdx * nSample_;
+  const auto & data = cvar_.data() + vIdx * nSample_;
 
   if (vIdx < nCont_) {
     // Continuous variable has 10 cuts
@@ -217,16 +217,16 @@ void Data::setCutMasks(size_t vIdx) {
     // no more than half of p, it then represents a valid cut, and the subset
     // consists of the elements corresponding to the 1 bits in the integer.
     size_t p = uniqNom_[vIdx - nCont_ - nOrd_].size();
-    size_t max = 1 << p;
+    size_t max = 1u << p;
     size_t half = p / 2; 
 
     for (size_t value = 0; value < max; ++value) {
+      //todo: the bitset<64> is a hard coding. We need to check the uniq values of nominal categorials, and also to avoid such uniq value is too large.
       std::bitset<64> subset(value);
       if (subset.count() <= half) {
         std::vector<bool> mask(nSample_);
         for (size_t j = 0; j < nSample_; ++j)
-          mask[j] = data[j] & value;
-
+            mask[j] = static_cast<bool>(data[j] & value);
         cMask_[vIdx].value.push_back(static_cast<int>(value));
         cMask_[vIdx].mask.push_back(mask); 
       }
