@@ -82,7 +82,7 @@ private:
   size_t nOrd_ = 0;    // Number of ordinal variables
   size_t nNom_ = 0;    // Number of nominal variables
   size_t nVar_ = 0;    // Number of variables 
-  size_t nResp_ = 0;   // Number of differnet responses 
+  size_t nResp_ = 0;   // Number of responses for each subject
   double T0_ = 0.0;    // Sum (Resp | Act = 0) 
    
   // Array of subject ID
