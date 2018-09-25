@@ -1,2 +1,1 @@
-FILE(GLOB ITR_headers *.h)
-install(FILES ${ITR_headers} DESTINATION include/itr)
+install(FILES Data.h ITR.h SearchEngine.h DESTINATION include/itr)

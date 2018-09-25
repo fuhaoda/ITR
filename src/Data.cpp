@@ -1,4 +1,4 @@
-#include <sstream> 
+#include <sstream>
 #include <iostream>
 #include <iterator>
 #include <algorithm>
@@ -48,8 +48,8 @@ void Data::loadCSV(const std::string &input) {
 
 void Data::parseCSVHeader(std::ifstream &infile) {
   // This function counts the number of continuous, ordinal, nominal variables,
-  // and the number of actions and responses.
-  // it requires the input file has aligned format
+  // and the number of actions and responses. It requires the input file has
+  // aligned format. 
   std::string line;
   std::istringstream ss;
   std::string field;
@@ -189,23 +189,33 @@ void Data::setCutMasks(size_t vIdx) {
     // Continuous variable has 10 cuts
     for (int value = 0; value < 10; ++value) {
       std::vector<bool> mask(nSample_);
-      for (size_t j = 0; j < nSample_; ++j)
-        mask[j] = data[j] <= value; 
+      std::vector<int> mask1(nSample_); 
+      for (size_t j = 0; j < nSample_; ++j) {
+        mask[j] = data[j] <= value;
+        mask1[j] = data[j] <= value;
+      }
   
       cMask_[vIdx].value.push_back(value);
       cMask_[vIdx].mask.push_back(mask);
+      cMask_[vIdx].mask1.push_back(mask1);
+            
     }
   } else if (vIdx < nCont_ + nOrd_) {
     // The number of cuts for ordinal variable vIdx is the number of the unique
     // values.
-
     for (const auto &value : uniqOrd_[vIdx - nCont_]) {
       std::vector<bool> mask(nSample_);
-      for (size_t j = 0; j < nSample_; ++j)
+      std::vector<int> mask1(nSample_);
+      
+      for (size_t j = 0; j < nSample_; ++j) {
         mask[j] = data[j] <= value;
-
+        mask1[j] = data[j] <= value;
+      }
+      
       cMask_[vIdx].value.push_back(value);
       cMask_[vIdx].mask.push_back(mask);
+            cMask_[vIdx].mask1.push_back(mask1);
+
     }
   } else {
     // The number of cuts for nominal variable vIdx is the number of subsets
@@ -221,43 +231,51 @@ void Data::setCutMasks(size_t vIdx) {
     size_t half = p / 2; 
 
     for (size_t value = 0; value < max; ++value) {
-      //todo: the bitset<64> is a hard coding. We need to check the uniq values of nominal categorials, and also to avoid such uniq value is too large.
+      // TODO: The following works only if there are no more than 64 unique
+      // values. 
       std::bitset<64> subset(value);
       if (subset.count() <= half) {
         std::vector<bool> mask(nSample_);
-        for (size_t j = 0; j < nSample_; ++j)
-            mask[j] = static_cast<bool>(data[j] & value);
+        std::vector<int> mask1(nSample_);
+        for (size_t j = 0; j < nSample_; ++j) {
+          mask[j] = static_cast<bool>(data[j] & value);
+          mask1[j] = static_cast<int>(data[j] & value);
+        }
         cMask_[vIdx].value.push_back(static_cast<int>(value));
-        cMask_[vIdx].mask.push_back(mask); 
+        cMask_[vIdx].mask.push_back(mask);
+                cMask_[vIdx].mask1.push_back(mask1); 
+
       }
     }   
   }
 }
 
-void Data::cutInfo(size_t vIdx, size_t cIdx, bool m) const {
+std::string Data::cutInfo(size_t vIdx, size_t cIdx, bool m) const {
+  std::stringstream info;
   if (vIdx < nCont_) {
-    std::cout << "  X" << vIdx << (m ? " < " : " >= ")
-              << decile_[vIdx][cIdx] << "\n";
+    info << " X" << vIdx << (m ? " < " : " >= ")
+         << decile_[vIdx][cIdx] << ", ";
   } else if (vIdx < nCont_ + nOrd_) {
-    std::cout << "  X" << vIdx << (m ? " < " : " >= ")
-              << cMask_[vIdx].value[cIdx] << "\n";
+    info << " X" << vIdx << (m ? " < " : " >= ")
+         << cMask_[vIdx].value[cIdx] << ", ";
   } else {
-    std::cout << "  X" << vIdx << (m ? " in " : " not in ") << "{";
+    info << " X" << vIdx << (m ? " in " : " not in ") << "{";
     auto subset = cMask_[vIdx].value[cIdx];
 
     if (subset == 0) {
       // This represents an empty set
-      std::cout << " }\n";
+      info << " }\n";
     } else {   
       unsigned iter = 0; 
       for (auto const &v : uniqOrd_[vIdx - nCont_ - nOrd_]) {
         if (subset & (1 << (iter++)))
-          std::cout << v << ", "; 
+          info << v << ", "; 
       }
-      std::cout <<"\b\b}\n";
+      info <<"\b\b}, ";
     }
   }
+
+  return info.str(); 
 }
 
 } // namespace ITR
-
