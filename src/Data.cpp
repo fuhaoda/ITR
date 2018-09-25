@@ -188,34 +188,25 @@ void Data::setCutMasks(size_t vIdx) {
   if (vIdx < nCont_) {
     // Continuous variable has 10 cuts
     for (int value = 0; value < 10; ++value) {
-      std::vector<bool> mask(nSample_);
-      std::vector<int> mask1(nSample_); 
+     std::vector<short> mask(nSample_); 
       for (size_t j = 0; j < nSample_; ++j) {
         mask[j] = data[j] <= value;
-        mask1[j] = data[j] <= value;
       }
   
       cMask_[vIdx].value.push_back(value);
       cMask_[vIdx].mask.push_back(mask);
-      cMask_[vIdx].mask1.push_back(mask1);
-            
     }
   } else if (vIdx < nCont_ + nOrd_) {
     // The number of cuts for ordinal variable vIdx is the number of the unique
     // values.
     for (const auto &value : uniqOrd_[vIdx - nCont_]) {
-      std::vector<bool> mask(nSample_);
-      std::vector<int> mask1(nSample_);
-      
+      std::vector<short> mask(nSample_);
       for (size_t j = 0; j < nSample_; ++j) {
         mask[j] = data[j] <= value;
-        mask1[j] = data[j] <= value;
       }
       
       cMask_[vIdx].value.push_back(value);
       cMask_[vIdx].mask.push_back(mask);
-            cMask_[vIdx].mask1.push_back(mask1);
-
     }
   } else {
     // The number of cuts for nominal variable vIdx is the number of subsets
@@ -235,16 +226,12 @@ void Data::setCutMasks(size_t vIdx) {
       // values. 
       std::bitset<64> subset(value);
       if (subset.count() <= half) {
-        std::vector<bool> mask(nSample_);
-        std::vector<int> mask1(nSample_);
+        std::vector<short> mask(nSample_);
         for (size_t j = 0; j < nSample_; ++j) {
-          mask[j] = static_cast<bool>(data[j] & value);
-          mask1[j] = static_cast<int>(data[j] & value);
+          mask[j] = (data[j] & value) > 0;  
         }
         cMask_[vIdx].value.push_back(static_cast<int>(value));
         cMask_[vIdx].mask.push_back(mask);
-                cMask_[vIdx].mask1.push_back(mask1); 
-
       }
     }   
   }

@@ -57,12 +57,8 @@ public:
   size_t nCut(size_t vIdx) const { return cMask_[vIdx].value.size(); }
 
   // Return the masks associated with cut j of variable i
-  const std::vector<bool> &cutMask(size_t vIdx, size_t cIdx) const {
-    return cMask_[vIdx].mask[cIdx];    
-  }
-
-  const std::vector<int> &cutMask1(size_t vIdx, size_t cIdx) const {
-    return cMask_[vIdx].mask1[cIdx];
+  const std::vector<short> &cutMask(size_t vIdx, size_t cIdx) const {
+    return cMask_[vIdx].mask[cIdx];
   }
   
   // Print information about cut cIdx for variable vIdx with mask m.
@@ -78,9 +74,7 @@ private:
     std::vector<int> value;
 
     // Masks of the components that belong to each cut
-    std::vector<std::vector<bool>> mask;
-
-    std::vector<std::vector<int>> mask1; 
+    std::vector<std::vector<short>> mask; 
   };
   
   size_t nSample_ = 0; // Sample size

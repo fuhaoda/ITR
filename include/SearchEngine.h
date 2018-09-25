@@ -40,7 +40,7 @@ public:
     choices_.resize(totalChoices_);
     scores_.resize(totalChoices_ << depth);
 
-    // Set all the search choices    
+    // Set all the search choices
     setSearchChoices(); 
   }
 
@@ -151,8 +151,7 @@ private:
       countChoices(sofar1, rest, restDepth - 1);
     }
   }
-
-
+  
   // This function sets all the search choices
   void setSearchChoices() {
     auto nVar = data_->nVar();
@@ -215,73 +214,27 @@ private:
     setRange(tid, first, last); 
     auto nSample = data_->nSample();
     size_t stride = 1u << depth;
-    
-    if (depth == 1) {
-      for (size_t i = first; i < last; ++i) {
-        double v[4] = {0.0};
-        double *ans = scores_.data() + i * stride;
-        const auto &m = data_->cutMask(choices_[i].vIdx[0],
-                                       choices_[i].cIdx[0]);
 
-        for (size_t j = 0; j < nSample; ++j)
-          v[2 * m[j] + data_->act(j)] += data_->resp(j);
+    for (size_t i = first; i < last; ++i) {
+      double v[1u << (depth + 1)] = {0.0};
+      double *ans = scores_.data() + i * stride;
 
-        ans[0] = v[1] - v[0];
-        ans[1] = v[3] - v[2]; 
+      const short *m[depth] = {nullptr};
+      for (size_t d = 0; d < depth; ++d)
+        m[d] = data_->cutMask(choices_[i].vIdx[d],
+                              choices_[i].cIdx[d]).data(); 
+      
+      for (size_t j = 0; j < nSample; ++j) {
+        size_t idx = data_->act(j);
+        for (size_t d = 0; d < depth; ++d)
+          idx += m[d][j] << (depth - d);
+
+        v[idx] += data_->resp(j);
       }
-    } else if (depth == 2) {
-      for (size_t i = first; i < last; ++i) {
-        double v[8] = {0.0};
-        double *ans = scores_.data() + i * stride;
-        const auto &m1 = data_->cutMask(choices_[i].vIdx[0],
-                                        choices_[i].cIdx[0]);
-        const auto &m2 = data_->cutMask(choices_[i].vIdx[1],
-                                        choices_[i].cIdx[1]);
 
-        for (size_t j = 0; j < nSample; ++j)
-          v[4 * m1[j] + 2 * m2[j] + data_->act(j)] += data_->resp(j);
-
-        ans[0] = v[1] - v[0];
-        ans[1] = v[3] - v[2];
-        ans[2] = v[5] - v[4];
-        ans[3] = v[7] - v[6]; 
-      }  
-    } else { // depth == 3
-      for (size_t i = first; i < last; ++i) {
-        double v[16] = {0.0};
-        double *ans = scores_.data() + i * stride;
-        const auto &m1 = data_->cutMask(choices_[i].vIdx[0],
-                                        choices_[i].cIdx[0]);
-        const auto &m2 = data_->cutMask(choices_[i].vIdx[1],
-                                        choices_[i].cIdx[1]);
-        const auto &m3 = data_->cutMask(choices_[i].vIdx[2],
-                                        choices_[i].cIdx[2]);
-
-        const auto &m11 = data_->cutMask1(choices_[i].vIdx[0],
-                                          choices_[i].cIdx[0]);
-        const auto &m21 = data_->cutMask1(choices_[i].vIdx[1],
-                                          choices_[i].cIdx[1]);
-        const auto &m31 = data_->cutMask1(choices_[i].vIdx[2],
-                                          choices_[i].cIdx[2]);
-        
-        
-        
-        for (size_t j = 0; j < nSample; ++j) {
-          //v[8 * m1[j] + 4 * m2[j] + 2 * m3[j] + data_->act(j)] += data_->resp(j);
-
-          v[8 * m11[j] + 4 * m21[j] + 2 * m31[j] + data_->act(j)] += data_->resp(j);
-        }
-        
-        ans[0] = v[1] - v[0];
-        ans[1] = v[3] - v[2];
-        ans[2] = v[5] - v[4];
-        ans[3] = v[7] - v[6];
-        ans[4] = v[9] - v[8];
-        ans[5] = v[11] - v[10];
-        ans[6] = v[13] - v[12];
-        ans[7] = v[15] - v[14]; 
-      }  
-    }        
+      for (size_t j = 0; j < stride; ++j)
+        ans[j] = v[2 * j + 1] - v[2 * j];
+    }
   }
 
   // This function is a helper function that determines the range of searches
