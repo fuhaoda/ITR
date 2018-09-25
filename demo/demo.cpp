@@ -1,20 +1,19 @@
-#include <string>
 #include <iostream>
-#include <getopt.h> 
+#include <string>
+#include <getopt.h>
 #include "ITR.h"
 
 void printUsage(char *program) {
-  fprintf(stdout, "Usage: %s [OPTIONS]\n"
-          "--data=STRING  Path to input file, default is sample100.csv\n"
-          "--thread=NUM   Number of threads to use, default is 1\n"
-          "--best=NUM     Number of top results to display, default is 5\n",
-          program);
+  std::cout << "Usage: " << program << " [OPTIONS]\n"
+            << "--data=STRING Path to input file, default is sample100.csv\n"
+            << "--thread=NUM  Number of threads to use, default is 1\n"
+            << "--best=NUM    Number of top results to display, default is 5\n";
 }
 
 int main(int argc, char **argv) {
   std::string ifile{"sample100.csv"};
   unsigned nThreads = 1;
-  unsigned nTop = 5; 
+  unsigned nTop = 5;
 
   // Parse command line
   static struct option long_options[] =
@@ -46,32 +45,27 @@ int main(int argc, char **argv) {
       return -1;
     }
   }
-  
+
   try {
-    // Create an ITR instance. The constructor takes two arguments: The first
-    // one is the path of the input data file, and the second one is the depth
-    // of the search.
+    // Create an ITR instance. The non-type parameter specifies the depth of the
+    // search and the valid values are 1, 2, or 3. Additionally, the constructor
+    // takes two arguments: The first one is the path to the input data file,
+    // and the second one is the number of threads used in the search.
 
-    // The valid values for the search depth are 1, 2, or 3.
+    // The constructor will throw an exception if the file does not exist.
+    ITR::ITR<3> instance{ifile, nThreads};
 
-    // The constructor will throw an exception if the file does not exist or if
-    // the depth of the search is invalid. 
-    ITR::ITR instance{ifile, 3};
+    // Run the search
+    instance.run();
 
-    // Run the search with specified depth
-    instance.run(nThreads);
+    // Retrive the top n treatment recommendations.
+    auto treatments = instance.report(nTop);
 
-    // Display the result. By default, the function prints out the best value
-    // and the associated cut information. Optionally, one can provide an
-    // integer input, say n, and the function will print out information
-    // associated with the best n search results. If n is larger than the number
-    // of searches performed, it will be truncated internally. 
-    instance.report(nTop);
+    for (const auto &item : treatments) 
+      std::cout << "Score = " << item.score << ", rule = " << item.rule << "\n";     
   } catch (const char *msg) {
     std::cout << msg << "\n";
   }
 
   return 0; 
-}
-
-  
+} 
