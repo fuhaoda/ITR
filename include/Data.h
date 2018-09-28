@@ -4,7 +4,8 @@
 #include <string>
 #include <fstream>
 #include <vector>
-#include <set> 
+#include <set>
+#include <cstdint> 
 
 namespace ITR {
 

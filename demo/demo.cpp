@@ -47,22 +47,13 @@ int main(int argc, char **argv) {
   }
 
   try {
-    // Create an ITR instance. The non-type parameter specifies the depth of the
-    // search and the valid values are 1, 2, or 3. Additionally, the constructor
-    // takes two arguments: The first one is the path to the input data file,
-    // and the second one is the number of threads used in the search.
-
-    // The constructor will throw an exception if the file does not exist.
-    ITR::ITR<3> instance{ifile, nThreads};
+    ITR::ITR instance{ifile, 3, nThreads}; 
 
     // Run the search
     instance.run();
 
     // Retrive the top n treatment recommendations.
-    auto treatments = instance.report(nTop);
-
-    for (const auto &item : treatments) 
-      std::cout << "Score = " << item.score << ", rule = " << item.rule << "\n";     
+    instance.report(nTop); 
   } catch (const char *msg) {
     std::cout << msg << "\n";
   }
