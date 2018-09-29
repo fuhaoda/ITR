@@ -49,10 +49,6 @@ public:
 
   // Return the ith component of the action vector
   int act(size_t i) const { return act_[i]; } 
-
-  // Return the ith subject of the jth covariate. The covariate matrix is stored
-  // by column-major to improve efficiency. 
-  int cvar(size_t i, size_t j) const { return cvar_[j * nSample_ + i]; }
   
   // Return the number of cuts for variable i
   size_t nCut(size_t vIdx) const { return cMask_[vIdx].value.size(); }
@@ -69,8 +65,7 @@ public:
   // then m = 0 means \in and m = 1 means not \in
   std::string cutInfo(size_t vIdx, size_t cIdx, bool m) const; 
 
-private:
-  
+private:  
   size_t nSample_ = 0; // Sample size
   size_t nCont_ = 0;   // Number of continuous variables
   size_t nOrd_ = 0;    // Number of ordinal variables
@@ -78,14 +73,6 @@ private:
   size_t nVar_ = 0;    // Number of variables 
   size_t nResp_ = 0;   // Number of responses for each subject
   double T0_ = 0.0;    // Sum (Resp | Act = 0) 
-
-  struct Meta {
-    // Values of the cut for this variable
-    std::vector<int> value;
-
-    // Masks of the components that belong to each cut
-    std::vector<std::vector<std::uint8_t>> mask;
-  };
   
   // Array of subject ID
   std::vector<int> id_; 
@@ -99,10 +86,17 @@ private:
   // Unique values of each nominal variable  
   std::vector<std::set<int>> uniqNom_; 
 
-  // Covariate matrix X[nCont_ + nOrd_ + nNom_][nSample_]. The different storage
-  // layout is to faciliate the access pattern of the comprehensive search. 
-  std::vector<int> cvar_;
+  struct Meta {
+    // Values of the cut for this variable
+    std::vector<int> value;
+    
+    // Masks of the components that belong to each cut
+    std::vector<std::vector<std::uint8_t>> mask;
+  };
   
+  // Cut and mask information for each variable
+  std::vector<Meta> cMask_;   
+    
   // Action vector A[nSample_];
   // We focus on the case of developing one optimal action each time
   std::vector<int> act_; 
@@ -116,10 +110,7 @@ private:
   std::vector<double> resp_; 
 
   // Probability of P(A = 1 | X) 
-  std::vector<double> prob_; 
-  
-  // Cut and mask information for each variable
-  std::vector<Meta> cMask_;   
+  std::vector<double> prob_;
 
   // This function loads the input file. It assumes that fields of the same type
   // are in consecutive columns. It also assumes that the fields are given in
@@ -150,8 +141,14 @@ private:
                     std::vector<std::vector<int>> &ord,
                     std::vector<std::vector<int>> &nom);
 
-  // For variable i, this function sets up the masks for all the associated cut
-  void setCutMasks(size_t i);  
+  // This function sets up the cut masks for the ith continuous variable
+  void setContCutMasks(size_t i, const std::vector<double> &cont);
+
+  // This function sets up the cut masks for the ith ordinal variable 
+  void setOrdCutMasks(size_t i, const std::vector<int> &ord);
+
+  // This function sets up the cut masks for the ith nominal variable
+  void setNomCutMasks(size_t i, const std::vector<int> &nom);   
 }; 
 
 

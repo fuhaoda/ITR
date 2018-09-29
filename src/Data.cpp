@@ -142,135 +142,138 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
     resp_[i * nResp_] /= (act_[i] ? prob_[i] : 1 - prob_[i]);
     T0_ += resp_[i * nResp_] * (1 - act_[i]);
   }
-  
-  // Parse continuous variables and set up cut masks
-  for (size_t i = 0; i < nCont_; ++i) 
-    convertContToDeciles(cont[i], decile_[i]);
 
-  // Parse ordinal variables
-  for (size_t i = 0; i < nOrd_; ++i)
-    convertOrdToRanks(ord[i], uniqOrd_[i]);
-
-  // Parse nominal variables
-  for (size_t i = 0; i < nNom_; ++i)
-    convertNomToBitMasks(nom[i], uniqNom_[i]); 
-
-  // Write parsed values into cvar_, where samples corresponding to the same
-  // variable are stored contiguously. 
-  cvar_.resize(nSample_ * nVar_);
-
-  for (size_t i = 0; i < nCont_; ++i) {
-    for (size_t j = 0; j < nSample_; ++j) {
-      cvar_[i * nSample_ + j] = static_cast<int>(cont[i][j]); 
-    }
-  }
-
-  auto v = cvar_.data() + nCont_ * nSample_; 
-  for (size_t i = 0; i < nOrd_; ++i) {
-    memcpy(v, ord[i].data(), sizeof(int) * nSample_);
-    v += nSample_;
-  }
-
-  for (size_t i = 0; i < nNom_; ++i) {
-    memcpy(v, nom[i].data(), sizeof(int) * nSample_);
-    v += nSample_; 
-  }
-
-  // Set cut masks for each variable
   cMask_.resize(nVar_); 
-  for (size_t i = 0; i < nVar_; ++i)
-    setCutMasks(i); 
+
+  // Parse continuous variables and set up cut masks
+  for (size_t i = 0; i < nCont_; ++i) {
+    convertContToDeciles(cont[i], decile_[i]);
+    setContCutMasks(i, cont[i]); 
+  }
+  
+  // Parse ordinal variables
+  for (size_t i = 0; i < nOrd_; ++i) {
+    convertOrdToRanks(ord[i], uniqOrd_[i]);
+    setOrdCutMasks(i, ord[i]);
+  }
+    
+  // Parse nominal variables
+  for (size_t i = 0; i < nNom_; ++i) {
+    convertNomToBitMasks(nom[i], uniqNom_[i]);
+    setNomCutMasks(i, nom[i]);
+  }
 }
 
-void Data::setCutMasks(size_t vIdx) {
-  // Get the handle of the data
-  const auto & data = cvar_.data() + vIdx * nSample_;
+void Data::setContCutMasks(size_t i, const std::vector<double> &cont) {
+  // Compute the overall variable index
+  size_t vIdx = i;
 
-  if (vIdx < nCont_) {
-    // Continuous variable has 10 cuts
-    for (int value = 0; value < 10; ++value) {
-      size_t r = nSample_ % 2; 
-      size_t nBatches = nSample_ >> 1;     
-      std::vector<std::uint8_t> mask(nBatches + (r > 0)); 
-      
-      for (size_t j = 0; j < nBatches; ++j) {
-        // Mask for sample 2j is stored in bits 4-7
-        mask[j] = (data[2 * j] <= value) << 4; 
-        // Mask for sample 2j+1 is stored in bits 0-3
-        mask[j] |= (data[2 * j + 1] <= value);
-      }
-      
-      // TODO: fix this
-      if (r) {
-        // Mask for the last sample is stored in bits 4-7
-        mask[nBatches] = (data[nSample_ - 1] <= value) << 4;
-      }
-      cMask_[vIdx].mask.push_back(mask);
-      cMask_[vIdx].value.push_back(value);      
+  // Get the handle of the data
+  const auto &data = cont.data();
+
+  // Continuous variable has 10 cuts
+  for (int value = 0; value < 10; ++value) {
+    size_t r = nSample_ % 2; 
+    size_t nBatches = nSample_ >> 1;     
+    std::vector<std::uint8_t> mask(nBatches + (r > 0)); 
+    
+    for (size_t j = 0; j < nBatches; ++j) {
+      // Mask for sample 2j is stored in bits 4-7
+      mask[j] = (static_cast<int>(data[2 * j]) <= value) << 4;  // without cast,
+                                                                // can change it
+                                                                // to <, and
+                                                                // maybe change
+                                                                // to value + 1
+      // Mask for sample 2j+1 is stored in bits 0-3
+      mask[j] |= (static_cast<int>(data[2 * j + 1]) <= value);
     }
-  } else if (vIdx < nCont_ + nOrd_) {
-    // The number of cuts for ordinal variable vIdx is the number of the unique
-    // values.
-    for (const auto &value : uniqOrd_[vIdx - nCont_]) {
+    
+    // TODO: fix this
+    if (r) {
+      // Mask for the last sample is stored in bits 4-7
+      mask[nBatches] = (static_cast<int>(data[nSample_ - 1]) <= value) << 4;
+    }
+    cMask_[vIdx].mask.push_back(mask);
+    cMask_[vIdx].value.push_back(value);      
+  }
+}
+
+void Data::setOrdCutMasks(size_t i, const std::vector<int> &ord) {
+  // Compute the overall variable index
+  size_t vIdx = i + nCont_;
+
+  // Get the handle of the data
+  const auto &data = ord.data();
+
+  // The number of cuts for ordinal variable vIdx is the number of the unique
+  // values.
+  for (const auto &value : uniqOrd_[vIdx - nCont_]) {
+    size_t r = nSample_ % 2;
+    size_t nBatches = nSample_ >> 1;
+    std::vector<std::uint8_t> mask(nSample_ + (r > 0));  
+
+    for (size_t j = 0; j < nBatches; ++j) {
+      // Mask for sample 2j is stored in bits 4-7
+      mask[j] = (data[2 * j] <= value) << 4;         
+        // Mask for sample 2j+1 is stored in bits 0-3
+      mask[j] |= (data[2 * j + 1] <= value);
+    }
+      
+    // TODO: fix this
+    if (r) {
+      // Mask for the last sample is stored in bits 4-7
+      mask[nBatches] = (data[nSample_ - 1] <= value) << 4;
+    }      
+    cMask_[vIdx].mask.push_back(mask);
+    cMask_[vIdx].value.push_back(value);
+  }
+}
+
+void Data::setNomCutMasks(size_t i, const std::vector<int> &nom) {
+  // Compute the overall variable index
+  size_t vIdx = i + nCont_ + nOrd_;
+
+  // Get the handle of the data
+  const auto &data = nom.data();
+
+  // The number of cuts for nominal variable vIdx is the number of subsets
+  // that contain no more than half of the unique values.
+
+  // Denote the number of unique values by p. Here, we loop from 0 to
+  // 2^p. Each iterator is interpreted as a bitmask, where bit j means the jth
+  // element in the unique set. For each integer, if the number of 1 bits is
+  // no more than half of p, it then represents a valid cut, and the subset
+  // consists of the elements corresponding to the 1 bits in the integer.
+  size_t p = uniqNom_[i].size();
+  size_t max = 1u << p;
+  size_t half = p / 2; 
+
+  for (size_t value = 0; value < max; ++value) {
+    // TODO: The following works only if there are no more than 64 unique
+    // values. 
+    std::bitset<64> subset(value);
+    if (subset.count() <= half) {
       size_t r = nSample_ % 2;
       size_t nBatches = nSample_ >> 1;
-      std::vector<std::uint8_t> mask(nSample_ + (r > 0));  
-
+      std::vector<std::uint8_t> mask(nBatches + (r > 0));
+      
       for (size_t j = 0; j < nBatches; ++j) {
         // Mask for sample 2j is stored in bits 4-7
-        mask[j] = (data[2 * j] <= value) << 4;         
+        mask[j] = ((data[2 * j] & value) > 0 ) << 4;
         // Mask for sample 2j+1 is stored in bits 0-3
-        mask[j] |= (data[2 * j + 1] <= value);
+        mask[j] |= (data[2 * j + 1] & value) > 0;
       }
       
-      // TODO: fix this
+      // TODO: Fix this
       if (r) {
         // Mask for the last sample is stored in bits 4-7
-        mask[nBatches] = (data[nSample_ - 1] <= value) << 4;
-      }      
-      cMask_[vIdx].mask.push_back(mask);
-      cMask_[vIdx].value.push_back(value);
-    }
-  } else {
-    // The number of cuts for nominal variable vIdx is the number of subsets
-    // that contain no more than half of the unique values.
-
-    // Denote the number of unique values by p. Here, we loop from 0 to
-    // 2^p. Each iterator is interpreted as a bitmask, where bit j means the jth
-    // element in the unique set. For each integer, if the number of 1 bits is
-    // no more than half of p, it then represents a valid cut, and the subset
-    // consists of the elements corresponding to the 1 bits in the integer.
-    size_t p = uniqNom_[vIdx - nCont_ - nOrd_].size();
-    size_t max = 1u << p;
-    size_t half = p / 2; 
-
-    for (size_t value = 0; value < max; ++value) {
-      // TODO: The following works only if there are no more than 64 unique
-      // values. 
-      std::bitset<64> subset(value);
-      if (subset.count() <= half) {
-        size_t r = nSample_ % 2;
-        size_t nBatches = nSample_ >> 1;
-        std::vector<std::uint8_t> mask(nBatches + (r > 0));
-        
-        for (size_t j = 0; j < nBatches; ++j) {
-          // Mask for sample 2j is stored in bits 4-7
-          mask[j] = ((data[2 * j] & value) > 0 ) << 4;
-          // Mask for sample 2j+1 is stored in bits 0-3
-          mask[j] |= (data[2 * j + 1] & value) > 0;
-        }
-
-        // TODO: Fix this
-        if (r) {
-          // Mask for the last sample is stored in bits 4-7
-          mask[nBatches] = ((data[nSample_ - 1] & value) > 0 ) << 4;
-        }
-        
-        cMask_[vIdx].mask.push_back(mask);
-        cMask_[vIdx].value.push_back(static_cast<int>(value));
+        mask[nBatches] = ((data[nSample_ - 1] & value) > 0 ) << 4;
       }
-    }   
-  }
+      
+      cMask_[vIdx].mask.push_back(mask);
+      cMask_[vIdx].value.push_back(static_cast<int>(value));
+    }
+  }   
 }
 
 std::string Data::cutInfo(size_t vIdx, size_t cIdx, bool m) const {
