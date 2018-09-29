@@ -84,7 +84,9 @@ void Data::loadRawData(std::ifstream &infile,
   std::string line; 
   std::istringstream ss;
   std::string field;
-
+  std::uint32_t val = 0; 
+  size_t iter = 0; 
+  
   while (getline(infile, line)) {
     nSample_++;
 
@@ -120,6 +122,13 @@ void Data::loadRawData(std::ifstream &infile,
     // Read action
     getline(ss, field, ',');
     act_.push_back(stoi(field));
+    // val |= (stoi(field) << (28 - 4 * iter)); 
+    // iter++;
+    // if (iter == 8) {
+    //   act_.push_back(val);
+    //   val = 0;
+    //   iter = 0;
+    // }
 
     // Read responses
     for (size_t i = 0; i < nResp_; ++i) {

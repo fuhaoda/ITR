@@ -48,7 +48,11 @@ public:
   double resp(size_t i, size_t j = 0) const { return resp_[i * nResp_ + j]; }
 
   // Return the ith component of the action vector
-  int act(size_t i) const { return act_[i]; } 
+  //int act(size_t i) const { return act_[i]; }
+
+  // Return the ith batch of the action vector
+  std::uint32_t act(size_t i) const { return act_[i]; }
+  
   
   // Return the number of cuts for variable i
   size_t nCut(size_t vIdx) const { return cvar_[vIdx].value.size(); }
@@ -99,7 +103,9 @@ private:
     
   // Action vector A[nSample_];
   // We focus on the case of developing one optimal action each time
-  std::vector<int> act_; 
+  //std::vector<int> act_;
+  std::vector<std::uint32_t> act_; 
+  
   
   // Response matrix Y[nSample_][nResp_]
   // Y can be a matrix, such as survival outcomes, incorporate multi-dimensional
