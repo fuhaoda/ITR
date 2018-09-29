@@ -172,29 +172,25 @@ void Data::setContCutMasks(size_t i, const std::vector<double> &cont) {
   const auto &data = cont.data();
 
   // Continuous variable has 10 cuts
-  for (int value = 0; value < 10; ++value) {
+  for (int value = 1; value <= 10; ++value) {
     size_t r = nSample_ % 2; 
     size_t nBatches = nSample_ >> 1;     
     std::vector<std::uint8_t> mask(nBatches + (r > 0)); 
     
     for (size_t j = 0; j < nBatches; ++j) {
       // Mask for sample 2j is stored in bits 4-7
-      mask[j] = (static_cast<int>(data[2 * j]) <= value) << 4;  // without cast,
-                                                                // can change it
-                                                                // to <, and
-                                                                // maybe change
-                                                                // to value + 1
-      // Mask for sample 2j+1 is stored in bits 0-3
-      mask[j] |= (static_cast<int>(data[2 * j + 1]) <= value);
+      mask[j] = (data[2 * j] < value) << 4;
+      // Mask for sample 2j+1 is stored in bits 0-3      
+      mask[j] |= (data[2 * j + 1] < value);
     }
     
     // TODO: fix this
     if (r) {
       // Mask for the last sample is stored in bits 4-7
-      mask[nBatches] = (static_cast<int>(data[nSample_ - 1]) <= value) << 4;
+      mask[nBatches] = (data[nSample_ - 1] < value) << 4; 
     }
     cMask_[vIdx].mask.push_back(mask);
-    cMask_[vIdx].value.push_back(value);      
+    cMask_[vIdx].value.push_back(value - 1);      
   }
 }
 
