@@ -143,7 +143,7 @@ void Data::parseRawData(std::vector<std::vector<double>> &cont,
     T0_ += resp_[i * nResp_] * (1 - act_[i]);
   }
 
-  cMask_.resize(nVar_); 
+  cvar_.resize(nVar_); 
 
   // Parse continuous variables and set up cut masks
   for (size_t i = 0; i < nCont_; ++i) {
@@ -189,8 +189,9 @@ void Data::setContCutMasks(size_t i, const std::vector<double> &cont) {
       // Mask for the last sample is stored in bits 4-7
       mask[nBatches] = (data[nSample_ - 1] < value) << 4; 
     }
-    cMask_[vIdx].mask.push_back(mask);
-    cMask_[vIdx].value.push_back(value - 1);      
+
+    cvar_[vIdx].mask.push_back(mask);
+    cvar_[vIdx].value.push_back(value - 1);      
   }
 }
 
@@ -211,7 +212,7 @@ void Data::setOrdCutMasks(size_t i, const std::vector<int> &ord) {
     for (size_t j = 0; j < nBatches; ++j) {
       // Mask for sample 2j is stored in bits 4-7
       mask[j] = (data[2 * j] <= value) << 4;         
-        // Mask for sample 2j+1 is stored in bits 0-3
+      // Mask for sample 2j+1 is stored in bits 0-3
       mask[j] |= (data[2 * j + 1] <= value);
     }
       
@@ -220,8 +221,8 @@ void Data::setOrdCutMasks(size_t i, const std::vector<int> &ord) {
       // Mask for the last sample is stored in bits 4-7
       mask[nBatches] = (data[nSample_ - 1] <= value) << 4;
     }      
-    cMask_[vIdx].mask.push_back(mask);
-    cMask_[vIdx].value.push_back(value);
+    cvar_[vIdx].mask.push_back(mask);
+    cvar_[vIdx].value.push_back(value);
   }
 }
 
@@ -264,10 +265,9 @@ void Data::setNomCutMasks(size_t i, const std::vector<int> &nom) {
       if (r) {
         // Mask for the last sample is stored in bits 4-7
         mask[nBatches] = ((data[nSample_ - 1] & value) > 0 ) << 4;
-      }
-      
-      cMask_[vIdx].mask.push_back(mask);
-      cMask_[vIdx].value.push_back(static_cast<int>(value));
+      }      
+      cvar_[vIdx].mask.push_back(mask);
+      cvar_[vIdx].value.push_back(static_cast<int>(value));
     }
   }   
 }
@@ -279,10 +279,10 @@ std::string Data::cutInfo(size_t vIdx, size_t cIdx, bool m) const {
          << decile_[vIdx][cIdx] << ", ";
   } else if (vIdx < nCont_ + nOrd_) {
     info << " X" << vIdx << (m ? " < " : " >= ")
-         << cMask_[vIdx].value[cIdx] << ", ";
+         << cvar_[vIdx].value[cIdx] << ", ";
   } else {
     info << " X" << vIdx << (m ? " in " : " not in ") << "{";
-    auto subset = cMask_[vIdx].value[cIdx];
+    auto subset = cvar_[vIdx].value[cIdx];
 
     if (subset == 0) {
       // This represents an empty set

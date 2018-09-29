@@ -51,11 +51,11 @@ public:
   int act(size_t i) const { return act_[i]; } 
   
   // Return the number of cuts for variable i
-  size_t nCut(size_t vIdx) const { return cMask_[vIdx].value.size(); }
+  size_t nCut(size_t vIdx) const { return cvar_[vIdx].value.size(); }
 
   // Return the masks associated with cut j of variable i
   const std::vector<std::uint8_t> &cutMask(size_t vIdx, size_t cIdx) const {
-    return cMask_[vIdx].mask[cIdx];
+    return cvar_[vIdx].mask[cIdx]; 
   }
   
   // Print information about cut cIdx for variable vIdx with mask m.
@@ -86,7 +86,7 @@ private:
   // Unique values of each nominal variable  
   std::vector<std::set<int>> uniqNom_; 
 
-  struct Meta {
+  struct Cvar {
     // Values of the cut for this variable
     std::vector<int> value;
     
@@ -95,7 +95,7 @@ private:
   };
   
   // Cut and mask information for each variable
-  std::vector<Meta> cMask_;   
+  std::vector<Cvar> cvar_; 
     
   // Action vector A[nSample_];
   // We focus on the case of developing one optimal action each time
