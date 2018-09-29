@@ -118,18 +118,22 @@ void Data::loadRawData(std::ifstream &infile,
       nom[i].push_back(val);
       uniqNom_[i].insert(val);
     }
-
+    
     // Read action
     getline(ss, field, ',');
+#if 0    
     act_.push_back(stoi(field));
-    // val |= (stoi(field) << (28 - 4 * iter)); 
-    // iter++;
-    // if (iter == 8) {
-    //   act_.push_back(val);
-    //   val = 0;
-    //   iter = 0;
-    // }
-
+    std::cout << stoi(field) << "\n";
+#else    
+    val |= (stoi(field) << (28 - 4 * iter)); 
+    iter++;
+    if (iter == 8) {
+      //std::cout << "\t" << std::hex << val << "\n";
+      act_.push_back(val);
+      val = 0;
+      iter = 0;
+    }
+#endif
     // Read responses
     for (size_t i = 0; i < nResp_; ++i) {
       getline(ss, field, ',');
@@ -140,17 +144,56 @@ void Data::loadRawData(std::ifstream &infile,
     getline(ss, field, ',');
     prob_.push_back(stod(field)); 
   }
+
+#if 1  
+  if (iter > 0)
+    act_.push_back(val); 
+    //std::cout << "\t" << std::hex << val << "\n";
+#endif
 }
 
 void Data::parseRawData(std::vector<std::vector<double>> &cont,
                         std::vector<std::vector<int>> &ord,
                         std::vector<std::vector<int>> &nom) {
+#if 0
   // Compute "scaled" response: Y / P(A | X) and T0
   // Assuming Y is a vector
   for (size_t i = 0; i < nSample_; ++i) {
     resp_[i * nResp_] /= (act_[i] ? prob_[i] : 1 - prob_[i]);
     T0_ += resp_[i * nResp_] * (1 - act_[i]);
   }
+#else
+  size_t r = nSample_ % 8;
+  size_t nBatches = nSample_ >> 3;
+  for (size_t i = 0; i < nBatches; ++i) {
+    size_t i8 = i << 3;
+    size_t tmp = act_[i];
+
+    for (int k = 7; k >= 0; --k) {
+      resp_[(i8 + k) * nResp_] /= (tmp & 0xF ? prob_[i8 + k] : 1 - prob_[i8 + k]);
+      T0_ += resp_[(i8 + k) * nResp_] * (1 - (tmp & 0xF));
+      tmp >>= 4;
+    }
+  }
+
+  if (r) {
+    size_t i8 = nBatches * 8;
+    size_t tmp = act_[nBatches];
+
+    // drop the bottom 4 * (8 - r) bits
+    tmp >>= (32 - 4 * r);
+
+    for (int k = r; k > 0; --k) {
+      // Get the bottom 4 bits
+      resp_[(i8 + k - 1) * nResp_] /=
+        (tmp & 0xF ? prob_[i8 + k - 1] : 1 - prob_[i8 + k - 1]);
+      T0_ += resp_[(i8 + k - 1) * nResp_] * (1 - (tmp & 0xF));
+      tmp >>= 4;
+    }
+  }
+
+  
+#endif  
 
   cvar_.resize(nVar_); 
 

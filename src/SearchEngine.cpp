@@ -173,6 +173,7 @@ void SearchEngine::worker(size_t tid) {
   size_t stride = 1u << depth_;
 
   for (size_t i = first; i < last; ++i) {
+  //for (size_t i = 0; i < 1; ++i) {
     std::vector<double> v(1u << (depth_ + 1), 0.0); 
     double *ans = scores_.data() + i * stride;
     std::vector<const std::uint32_t *> m(depth_);
@@ -183,19 +184,68 @@ void SearchEngine::worker(size_t tid) {
 
     size_t r = nSample % 8;
     size_t nBatches = nSample >> 3;
+#if 0
     for (size_t j = 0; j < nBatches; ++j) {
       size_t idx = 0;
-      //size_t idx = data_->act(j); 
+      for (size_t d = 0; d < depth_; ++d)
+        idx += m[d][j] << (depth_ - d);
+
+      std::uint32_t ttt = data_->act(j); 
+
+      
+      size_t j8 = 8 * j;
+      for (int k = 7; k >= 0; --k) {
+        // Get the bottom 4 bits
+        //size_t tmp = (idx & 0xF) + data_->act(j8 + k);
+        size_t tmp = (idx & 0xF) + (ttt & 0xF);
+
+        
+        v[tmp] += data_->resp(j8 + k);
+
+        // Drop the bottom 4 bits
+        idx >>= 4;
+        ttt >>= 4; 
+      }
+    }
+
+    if (r) {
+      size_t idx = 0;
+      for (size_t d = 0; d < depth_; ++d)
+        idx += m[d][nBatches] << (depth_ - d);
+
+      // Drop the bottom 4 * (8 - r) bits
+      idx >>= (32 - 4 * r);
+
+      std::uint32_t ttt = data_->act(nBatches);
+
+      ttt >>= (32 - 4 * r); 
+
+      size_t j8 = 8 * nBatches;
+      for (int k = r; k > 0; --k) {
+        // Get the bottom 4 bits
+        //size_t tmp = (idx & 0xF) + data_->act(j8 + k - 1);
+
+        size_t tmp = (idx & 0xF) + (ttt & 0xF); 
+        
+        v[tmp] += data_->resp(j8 + k - 1);
+
+        // Drop the bottom 4 bits
+        idx >>= 4;
+        ttt >>= 4; 
+      }
+    }    
+#else 
+    for (size_t j = 0; j < nBatches; ++j) {
+      size_t idx = data_->act(j); 
+
       for (size_t d = 0; d < depth_; ++d)
         idx += m[d][j] << (depth_ - d);
 
       size_t j8 = 8 * j;
       for (int k = 7; k >= 0; --k) {
         // Get the bottom 4 bits
-        size_t tmp = (idx & 0xF) + data_->act(j8 + k);
+        size_t tmp = idx & 0xF;         
         v[tmp] += data_->resp(j8 + k);
-
-        //v[idx & 0xF] += data_->resp(j8 + k); 
         
         // Drop the bottom 4 bits
         idx >>= 4;
@@ -203,8 +253,7 @@ void SearchEngine::worker(size_t tid) {
     }
 
     if (r) {
-      size_t idx = 0;
-      //size_t idx = data_->act(nBatches); 
+      size_t idx = data_->act(nBatches); 
       for (size_t d = 0; d < depth_; ++d)
         idx += m[d][nBatches] << (depth_ - d);
 
@@ -214,14 +263,13 @@ void SearchEngine::worker(size_t tid) {
       size_t j8 = 8 * nBatches;
       for (int k = r; k > 0; --k) {
         // Get the bottom 4 bits
-        size_t tmp = (idx & 0xF) + data_->act(j8 + k - 1); 
+        size_t tmp = idx & 0xF;
         v[tmp] += data_->resp(j8 + k - 1);
-        //v[idx & 0xF] += data_->resp(j8 + k - 1); 
 
-        // Drop the bottom 4 bits
-        idx >>= 4;
+        idx >>= 4; 
       }
-    }
+    }    
+#endif    
         
         
     for (size_t j = 0; j < stride; ++j)
