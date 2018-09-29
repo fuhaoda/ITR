@@ -180,29 +180,68 @@ void SearchEngine::worker(size_t tid) {
     for (size_t d = 0; d < depth_; ++d) 
       m[d] = data_->cutMask(choices_[i].vIdx[d],
                             choices_[i].cIdx[d]).data();
-    
-    size_t r = nSample % 2;
-    size_t nBatches = nSample >> 1;
+
+    size_t r = nSample % 8;
+    size_t nBatches = nSample >> 3;
     for (size_t j = 0; j < nBatches; ++j) {
       size_t idx = 0;
       for (size_t d = 0; d < depth_; ++d)
         idx += m[d][j] << (depth_ - d);
 
-      size_t tmp1 = ((idx & 0xF0) >> 4) +  data_->act(2 * j);
-      size_t tmp2 = (idx & 0x0F) + data_->act(2 * j + 1);
-      
-      v[tmp1] += data_->resp(2 * j);
-      v[tmp2] += data_->resp(2 * j + 1);
+      size_t j8 = 8 * j;
+      for (int k = 7; k >= 0; --k) {
+        // Get the bottom 4 bits
+        size_t tmp = (idx & 0xF) + data_->act(j8 + k);
+        v[tmp] += data_->resp(j8 + k);
+
+        // Drop the bottom 4 bits
+        idx >>= 4;
+      }
     }
 
     if (r) {
-      size_t idx = 0; 
+      size_t idx = 0;
       for (size_t d = 0; d < depth_; ++d)
         idx += m[d][nBatches] << (depth_ - d);
 
-      idx = (idx >> 4) + data_->act(nSample - 1);      
-      v[idx] += data_->resp(nSample - 1);
+      // Drop the bottom 4 * (8 - r) bits
+      idx >>= (32 - 4 * r);
+
+      size_t j8 = 8 * nBatches;
+      for (int k = r; k > 0; --k) {
+        // Get the bottom 4 bits
+        size_t tmp = (idx & 0xF) + data_->act(j8 + k - 1); 
+        v[tmp] += data_->resp(j8 + k - 1);
+
+        // Drop the bottom 4 bits
+        idx >>= 4;
+      }
     }
+        
+        
+    
+    // size_t r = nSample % 2;
+    // size_t nBatches = nSample >> 1;
+    // for (size_t j = 0; j < nBatches; ++j) {
+    //   size_t idx = 0;
+    //   for (size_t d = 0; d < depth_; ++d)
+    //     idx += m[d][j] << (depth_ - d);
+
+    //   size_t tmp1 = ((idx & 0xF0) >> 4) +  data_->act(2 * j);
+    //   size_t tmp2 = (idx & 0x0F) + data_->act(2 * j + 1);
+      
+    //   v[tmp1] += data_->resp(2 * j);
+    //   v[tmp2] += data_->resp(2 * j + 1);
+    // }
+
+    // if (r) {
+    //   size_t idx = 0; 
+    //   for (size_t d = 0; d < depth_; ++d)
+    //     idx += m[d][nBatches] << (depth_ - d);
+
+    //   idx = (idx >> 4) + data_->act(nSample - 1);      
+    //   v[idx] += data_->resp(nSample - 1);
+    // }
 
     for (size_t j = 0; j < stride; ++j)
       ans[j] = v[2 * j + 1] - v[2 * j]; 
