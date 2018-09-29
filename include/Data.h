@@ -61,12 +61,6 @@ public:
   const std::vector<std::uint8_t> &cutMask(size_t vIdx, size_t cIdx) const {
     return cMask_[vIdx].mask[cIdx];
   }
-
-
-  const std::vector<std::uint8_t> &tempMask(size_t vIdx, size_t cIdx) const {
-    return cMask_[vIdx].temp[cIdx];
-  }
-
   
   // Print information about cut cIdx for variable vIdx with mask m.
   // If vIdx is a continuous or ordinal variable,
@@ -91,10 +85,7 @@ private:
 
     // Masks of the components that belong to each cut
     std::vector<std::vector<std::uint8_t>> mask;
-
-    std::vector<std::vector<std::uint8_t>> temp; 
   };
-
   
   // Array of subject ID
   std::vector<int> id_; 
