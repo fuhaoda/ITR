@@ -58,9 +58,15 @@ public:
   size_t nCut(size_t vIdx) const { return cMask_[vIdx].value.size(); }
 
   // Return the masks associated with cut j of variable i
-  const std::vector<short> &cutMask(size_t vIdx, size_t cIdx) const {
+  const std::vector<std::uint8_t> &cutMask(size_t vIdx, size_t cIdx) const {
     return cMask_[vIdx].mask[cIdx];
   }
+
+
+  const std::vector<std::uint8_t> &tempMask(size_t vIdx, size_t cIdx) const {
+    return cMask_[vIdx].temp[cIdx];
+  }
+
   
   // Print information about cut cIdx for variable vIdx with mask m.
   // If vIdx is a continuous or ordinal variable,
@@ -70,13 +76,6 @@ public:
   std::string cutInfo(size_t vIdx, size_t cIdx, bool m) const; 
 
 private:
-  struct Meta {
-    // Values of the cut for this variable
-    std::vector<int> value;
-
-    // Masks of the components that belong to each cut
-    std::vector<std::vector<short>> mask; 
-  };
   
   size_t nSample_ = 0; // Sample size
   size_t nCont_ = 0;   // Number of continuous variables
@@ -85,7 +84,18 @@ private:
   size_t nVar_ = 0;    // Number of variables 
   size_t nResp_ = 0;   // Number of responses for each subject
   double T0_ = 0.0;    // Sum (Resp | Act = 0) 
-   
+
+  struct Meta {
+    // Values of the cut for this variable
+    std::vector<int> value;
+
+    // Masks of the components that belong to each cut
+    std::vector<std::vector<std::uint8_t>> mask;
+
+    std::vector<std::vector<std::uint8_t>> temp; 
+  };
+
+  
   // Array of subject ID
   std::vector<int> id_; 
 

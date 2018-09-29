@@ -3,6 +3,7 @@
 #include <iterator>
 #include <algorithm>
 #include <cstring>
+#include <cstdint>
 #include <bitset>
 #include <sys/stat.h>
 #include "Data.h"
@@ -130,6 +131,16 @@ void Data::loadRawData(std::ifstream &infile,
     getline(ss, field, ',');
     prob_.push_back(stod(field)); 
   }
+
+  // // TODO: improve this comment 
+  // // Pad 0 to the end of resp_ such that its row number is a multiply of four
+  // if (int r = nSample_ % 4) {
+  //   std::vector<int> tmp1(4 - r, 0);
+  //   act_.insert(act_.end(), tmp1.begin(), tmp1.end()); 
+    
+  //   std::vector<double> tmp((4 - r) * nResp_, 0.0);
+  //   resp_.insert(resp_.end(), tmp.begin(), tmp.end());
+  // }  
 }
 
 void Data::parseRawData(std::vector<std::vector<double>> &cont,
@@ -188,25 +199,69 @@ void Data::setCutMasks(size_t vIdx) {
   if (vIdx < nCont_) {
     // Continuous variable has 10 cuts
     for (int value = 0; value < 10; ++value) {
-     std::vector<short> mask(nSample_); 
-      for (size_t j = 0; j < nSample_; ++j) {
+     std::vector<std::uint8_t> mask(nSample_);
+     for (size_t j = 0; j < nSample_; ++j) {
         mask[j] = data[j] <= value;
       }
-  
       cMask_[vIdx].value.push_back(value);
       cMask_[vIdx].mask.push_back(mask);
+     
+#if 1     
+     size_t r = nSample_ % 2; 
+     size_t nBatches = nSample_ >> 1;     
+     std::vector<std::uint8_t> temp(nBatches + (r > 0)); 
+
+     for (size_t j = 0; j < nBatches; ++j) {
+       // Mask for sample 2j is stored in bits 4-7
+       temp[j] = (data[2 * j] <= value) << 4; 
+       
+       // Mask for sample 2j+1 is stored in bits 0-3
+       temp[j] |= (data[2 * j + 1] <= value);
+     }
+     
+     // TODO: fix this
+     if (r) {
+       // Mask for the last sample is stored in bits 4-7
+       temp[nBatches] = (data[nSample_ - 1] <= value) << 4;
+     }
+     cMask_[vIdx].temp.push_back(temp);
+
+#endif            
+            
     }
   } else if (vIdx < nCont_ + nOrd_) {
     // The number of cuts for ordinal variable vIdx is the number of the unique
     // values.
     for (const auto &value : uniqOrd_[vIdx - nCont_]) {
-      std::vector<short> mask(nSample_);
+      std::vector<std::uint8_t> mask(nSample_);
       for (size_t j = 0; j < nSample_; ++j) {
         mask[j] = data[j] <= value;
       }
-      
       cMask_[vIdx].value.push_back(value);
       cMask_[vIdx].mask.push_back(mask);
+      
+#if 1
+      size_t r = nSample_ % 2;
+      size_t nBatches = nSample_ >> 1;
+      std::vector<std::uint8_t> temp(nSample_ + (r > 0));  
+
+      for (size_t j = 0; j < nBatches; ++j) {
+        // Mask for sample 2j is stored in bits 4-7
+        temp[j] = (data[2 * j] <= value) << 4; 
+        
+        // Mask for sample 2j+1 is stored in bits 0-3
+        temp[j] |= (data[2 * j + 1] <= value);
+      }
+      
+      // TODO: fix this
+      if (r) {
+        // Mask for the last sample is stored in bits 4-7
+        temp[nBatches] = (data[nSample_ - 1] <= value) << 4;
+      }
+
+      cMask_[vIdx].temp.push_back(temp);
+#endif      
+            
     }
   } else {
     // The number of cuts for nominal variable vIdx is the number of subsets
@@ -226,12 +281,34 @@ void Data::setCutMasks(size_t vIdx) {
       // values. 
       std::bitset<64> subset(value);
       if (subset.count() <= half) {
-        std::vector<short> mask(nSample_);
+        std::vector<std::uint8_t> mask(nSample_);
         for (size_t j = 0; j < nSample_; ++j) {
-          mask[j] = (data[j] & value) > 0;  
+          mask[j] = (data[j] & value) > 0;          
         }
         cMask_[vIdx].value.push_back(static_cast<int>(value));
         cMask_[vIdx].mask.push_back(mask);
+
+#if 1
+        size_t r = nSample_ % 2;
+        size_t nBatches = nSample_ >> 1;
+        std::vector<std::uint8_t> temp(nBatches + (r > 0));
+
+        for (size_t j = 0; j < nBatches; ++j) {
+          // Mask for sample 2j is stored in bits 4-7
+          temp[j] = ((data[2 * j] & value) > 0 ) << 4;
+
+          // Mask for sample 2j+1 is stored in bits 0-3
+          temp[j] |= (data[2 * j + 1] & value) > 0;
+        }
+
+        // TODO: Fix this
+        if (r) {
+          // Mask for the last sample is stored in bits 4-7
+          temp[nBatches] = ((data[nSample_ - 1] & value) > 0 ) << 4;
+        }
+        
+        cMask_[vIdx].temp.push_back(temp);
+#endif
       }
     }   
   }
