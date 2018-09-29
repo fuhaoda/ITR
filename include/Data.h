@@ -54,7 +54,7 @@ public:
   size_t nCut(size_t vIdx) const { return cvar_[vIdx].value.size(); }
 
   // Return the masks associated with cut j of variable i
-  const std::vector<std::uint8_t> &cutMask(size_t vIdx, size_t cIdx) const {
+  const std::vector<std::uint32_t> &cutMask(size_t vIdx, size_t cIdx) const {
     return cvar_[vIdx].mask[cIdx]; 
   }
   
@@ -91,7 +91,7 @@ private:
     std::vector<int> value;
     
     // Masks of the components that belong to each cut
-    std::vector<std::vector<std::uint8_t>> mask;
+    std::vector<std::vector<std::uint32_t>> mask;
   };
   
   // Cut and mask information for each variable

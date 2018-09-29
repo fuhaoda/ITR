@@ -175,7 +175,7 @@ void Data::setContCutMasks(size_t i, const std::vector<double> &cont) {
   for (int value = 1; value <= 10; ++value) {
     size_t r = nSample_ % 2; 
     size_t nBatches = nSample_ >> 1;     
-    std::vector<std::uint8_t> mask(nBatches + (r > 0)); 
+    std::vector<std::uint32_t> mask(nBatches + (r > 0)); 
     
     for (size_t j = 0; j < nBatches; ++j) {
       // Mask for sample 2j is stored in bits 4-7
@@ -207,7 +207,7 @@ void Data::setOrdCutMasks(size_t i, const std::vector<int> &ord) {
   for (const auto &value : uniqOrd_[vIdx - nCont_]) {
     size_t r = nSample_ % 2;
     size_t nBatches = nSample_ >> 1;
-    std::vector<std::uint8_t> mask(nSample_ + (r > 0));  
+    std::vector<std::uint32_t> mask(nSample_ + (r > 0));  
 
     for (size_t j = 0; j < nBatches; ++j) {
       // Mask for sample 2j is stored in bits 4-7
@@ -252,7 +252,7 @@ void Data::setNomCutMasks(size_t i, const std::vector<int> &nom) {
     if (subset.count() <= half) {
       size_t r = nSample_ % 2;
       size_t nBatches = nSample_ >> 1;
-      std::vector<std::uint8_t> mask(nBatches + (r > 0));
+      std::vector<std::uint32_t> mask(nBatches + (r > 0));
       
       for (size_t j = 0; j < nBatches; ++j) {
         // Mask for sample 2j is stored in bits 4-7

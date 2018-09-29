@@ -175,7 +175,7 @@ void SearchEngine::worker(size_t tid) {
   for (size_t i = first; i < last; ++i) {
     std::vector<double> v(1u << (depth_ + 1), 0.0); 
     double *ans = scores_.data() + i * stride;
-    std::vector<const std::uint8_t *> m(depth_);
+    std::vector<const std::uint32_t *> m(depth_);
     
     for (size_t d = 0; d < depth_; ++d) 
       m[d] = data_->cutMask(choices_[i].vIdx[d],
