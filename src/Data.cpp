@@ -84,7 +84,7 @@ void Data::loadRawData(std::ifstream &infile,
   std::string line; 
   std::istringstream ss;
   std::string field;
-  std::uint32_t val = 0; 
+  std::uint32_t val = 0;
   size_t iter = 0; 
   
   while (getline(infile, line)) {
@@ -121,19 +121,15 @@ void Data::loadRawData(std::ifstream &infile,
     
     // Read action
     getline(ss, field, ',');
-#if 0    
-    act_.push_back(stoi(field));
-    std::cout << stoi(field) << "\n";
-#else    
-    val |= (stoi(field) << (28 - 4 * iter)); 
-    iter++;
-    if (iter == 8) {
-      //std::cout << "\t" << std::hex << val << "\n";
+
+    // Each action is saved using 4 bits. The values are accumulated inside
+    // 'val' and write to the container 8 at a time. 
+    val |= stoi(field) << (28 - 4 * (iter & 0x7));
+    if (!(++iter & 0x7)) {
       act_.push_back(val);
       val = 0;
-      iter = 0;
     }
-#endif
+
     // Read responses
     for (size_t i = 0; i < nResp_; ++i) {
       getline(ss, field, ',');
@@ -145,55 +141,46 @@ void Data::loadRawData(std::ifstream &infile,
     prob_.push_back(stod(field)); 
   }
 
-#if 1  
-  if (iter > 0)
+  // Write the final bits if the number of samples is not a multiple of 8
+  if (iter & 0x7)
     act_.push_back(val); 
-    //std::cout << "\t" << std::hex << val << "\n";
-#endif
 }
 
 void Data::parseRawData(std::vector<std::vector<double>> &cont,
                         std::vector<std::vector<int>> &ord,
                         std::vector<std::vector<int>> &nom) {
-#if 0
   // Compute "scaled" response: Y / P(A | X) and T0
   // Assuming Y is a vector
-  for (size_t i = 0; i < nSample_; ++i) {
-    resp_[i * nResp_] /= (act_[i] ? prob_[i] : 1 - prob_[i]);
-    T0_ += resp_[i * nResp_] * (1 - act_[i]);
-  }
-#else
   size_t r = nSample_ % 8;
   size_t nBatches = nSample_ >> 3;
+
   for (size_t i = 0; i < nBatches; ++i) {
     size_t i8 = i << 3;
-    size_t tmp = act_[i];
-
+    size_t mask = act_[i];
     for (int k = 7; k >= 0; --k) {
-      resp_[(i8 + k) * nResp_] /= (tmp & 0xF ? prob_[i8 + k] : 1 - prob_[i8 + k]);
-      T0_ += resp_[(i8 + k) * nResp_] * (1 - (tmp & 0xF));
-      tmp >>= 4;
+      size_t idx = (i8 + k) * nResp_;
+      double p = prob_[i8 + k]; 
+      resp_[idx] /= (mask & 0xF ? p : 1 - p);
+      T0_ += resp_[idx] * (1 - (mask & 0xF));
+      mask >>= 4; 
     }
   }
 
   if (r) {
-    size_t i8 = nBatches * 8;
-    size_t tmp = act_[nBatches];
+    size_t i8 = nBatches << 3;
+    std::uint32_t mask = act_[nBatches];
 
-    // drop the bottom 4 * (8 - r) bits
-    tmp >>= (32 - 4 * r);
+    // Drop the bottom 32 - 4 * r bits that are all zero
+    mask >>= (32 - 4 * r);
 
-    for (int k = r; k > 0; --k) {
-      // Get the bottom 4 bits
-      resp_[(i8 + k - 1) * nResp_] /=
-        (tmp & 0xF ? prob_[i8 + k - 1] : 1 - prob_[i8 + k - 1]);
-      T0_ += resp_[(i8 + k - 1) * nResp_] * (1 - (tmp & 0xF));
-      tmp >>= 4;
+    for (int k = r - 1; k >= 0; --k) {
+      size_t idx = (i8 + k) * nResp_;
+      double p = prob_[i8 + k];
+      resp_[idx] /= (mask & 0xF ? p : 1 - p);
+      T0_ += resp_[idx] * (1 - (mask & 0xF));
+      mask >>= 4;
     }
   }
-
-  
-#endif  
 
   cvar_.resize(nVar_); 
 
@@ -230,31 +217,28 @@ void Data::setContCutMasks(size_t i, const std::vector<double> &cont) {
     std::vector<std::uint32_t> mask(nBatches + (r > 0)); 
     
     for (size_t j = 0; j < nBatches; ++j) {
-      size_t j8 = j * 8;       
-      // Mask for sample 8j is stored in bits 28-31
-      // Mask for sample 8j+1 is stored in bits 24-27           
-      // Mask for sample 8j+2 is stored in bits 20-23
-      // Mask for sample 8j+3 is stored in bits 16-19
-      // Mask for sample 8j+4 is stored in bits 12-15
-      // Mask for sample 8j+5 is stored in bits 8-11
-      // Mask for sample 8j+6 is stored in bits 4-7
-      // Mask for sample 8j+7 is stored in bits 0-3      
-      mask[j] = (data[j8] < value) << 28;
-      mask[j] |= ((data[j8 + 1] < value) << 24);
-      mask[j] |= ((data[j8 + 2] < value) << 20);
-      mask[j] |= ((data[j8 + 3] < value) << 16);
-      mask[j] |= ((data[j8 + 4] < value) << 12);
-      mask[j] |= ((data[j8 + 5] < value) << 8);
-      mask[j] |= ((data[j8 + 6] < value) << 4);       
-      mask[j] |= ((data[j8 + 7] < value));
+      size_t j8 = j << 3;
+      std::uint32_t val{0};
+      // Mask for sample j8 is stored in bits 28-31
+      // Mask for sample j8+1 is stored in bits 24-27
+      // Mask for sample j8+2 is stored in bits 20-23
+      // Mask for sample j8+3 is stored in bits 16-19
+      // Mask for sample j8+4 is stored in bits 12-15
+      // Mask for sample j8+5 is stored in bits 8-11
+      // Mask for sample j8+6 is stored in bits 4-7
+      // Mask for sample j8+7 is stored in bits 0-3
+      for (size_t k = 0; k < 8; ++k)
+        val |= (data[j8 + k] < value) << (28 - 4 * k);
+
+      mask[j] = val; 
     }
     
-    // TODO: fix this
     if (r) {
-      size_t j8 = nBatches * 8;
-      mask[nBatches] = (data[j8] < value) << 28;
-      for (size_t k = 1; k < r; ++k)
-        mask[nBatches] |= ((data[j8 + k] < value) << (28 - 4 * k));
+      size_t j8 = nBatches << 3;
+      std::uint32_t val{0};
+      for (size_t k = 0; k < r; ++k)
+        val |= (data[j8 + k] < value) << (28 - 4 * k);
+      mask[nBatches] = val; 
     }
 
     cvar_[vIdx].mask.push_back(mask);
@@ -277,23 +261,20 @@ void Data::setOrdCutMasks(size_t i, const std::vector<int> &ord) {
     std::vector<std::uint32_t> mask(nSample_ + (r > 0));  
 
     for (size_t j = 0; j < nBatches; ++j) {
-      size_t j8 = j * 8; 
-      mask[j] = (data[j8] <= value) << 28;
-      mask[j] |= ((data[j8 + 1] <= value) << 24);
-      mask[j] |= ((data[j8 + 2] <= value) << 20);
-      mask[j] |= ((data[j8 + 3] <= value) << 16);
-      mask[j] |= ((data[j8 + 4] <= value) << 12);
-      mask[j] |= ((data[j8 + 5] <= value) << 8);
-      mask[j] |= ((data[j8 + 6] <= value) << 4);
-      mask[j] |= (data[j8 + 7] <= value);
+      size_t j8 = j << 3;
+      std::uint32_t val{0};
+      for (size_t k = 0; k < 8; ++k)
+        val |= (data[j8 + k] <= value) << (28 - 4 * k);
+
+      mask[j] = val; 
     }
       
-    // TODO: fix this
     if (r) {
-      size_t j8 = nBatches * 8;
-      mask[nBatches] = (data[j8] <= value) << 28;
-      for (size_t k = 1; k < r; ++k)
-        mask[nBatches] |= ((data[j8 + k] <= value) << (28 - 4 * k));
+      size_t j8 = nBatches << 3;
+      std::uint32_t val{0};
+      for (size_t k = 0; k < r; ++k)
+        val |= (data[j8 + k] <= value) << (28 - 4 * k);
+      mask[nBatches] = val; 
     }      
     cvar_[vIdx].mask.push_back(mask);
     cvar_[vIdx].value.push_back(value);
@@ -310,11 +291,11 @@ void Data::setNomCutMasks(size_t i, const std::vector<int> &nom) {
   // The number of cuts for nominal variable vIdx is the number of subsets
   // that contain no more than half of the unique values.
 
-  // Denote the number of unique values by p. Here, we loop from 0 to
-  // 2^p. Each iterator is interpreted as a bitmask, where bit j means the jth
-  // element in the unique set. For each integer, if the number of 1 bits is
-  // no more than half of p, it then represents a valid cut, and the subset
-  // consists of the elements corresponding to the 1 bits in the integer.
+  // Denote the number of unique values by p. Here, we loop from 0 to 2^p. Each
+  // iterator is interpreted as a bitmask, where bit j means the jth element in
+  // the unique set. For each integer, if the number of 1 bits is no more than
+  // half of p, it then represents a valid cut, and the subset consists of the
+  // elements corresponding to the 1 bits in the integer. 
   size_t p = uniqNom_[i].size();
   size_t max = 1u << p;
   size_t half = p / 2; 
@@ -329,23 +310,20 @@ void Data::setNomCutMasks(size_t i, const std::vector<int> &nom) {
       std::vector<std::uint32_t> mask(nBatches + (r > 0));
       
       for (size_t j = 0; j < nBatches; ++j) {
-        size_t j8 = j * 8;
-        mask[j] = ((data[j8] & value) > 0) << 28;
-        mask[j] |= (((data[j8 + 1] & value) > 0) << 24);
-        mask[j] |= (((data[j8 + 2] & value) > 0) << 20);
-        mask[j] |= (((data[j8 + 3] & value) > 0) << 16);
-        mask[j] |= (((data[j8 + 4] & value) > 0) << 12); 
-        mask[j] |= (((data[j8 + 5] & value) > 0) << 8); 
-        mask[j] |= (((data[j8 + 6] & value) > 0) << 4); 
-        mask[j] |= ((data[j8 + 7] & value) > 0); 
+        size_t j8 = j << 3;
+        std::uint32_t val{0};
+        for (size_t k = 0; k < 8; ++k)
+          val |= ((data[j8 + k] & value) > 0) << (28 - 4 * k); 
+
+        mask[j] = val; 
       }
       
-      // TODO: Fix this
       if (r) {
-        size_t j8 = nBatches * 8;
-        mask[nBatches] = ((data[j8] & value) > 0) << 28;
-        for (size_t k = 1; k < r; ++k)
-          mask[nBatches] |= (((data[j8 + k] & value) > 0) << (28 - 4 * k));
+        size_t j8 = nBatches << 3;
+        std::uint32_t val{0};
+        for (size_t k = 0; k < r; ++k)
+          val |= ((data[j8 + k] & value) > 0) << (28 - 4 * k);
+        mask[nBatches] = val; 
       }      
       cvar_[vIdx].mask.push_back(mask);
       cvar_[vIdx].value.push_back(static_cast<int>(value));
