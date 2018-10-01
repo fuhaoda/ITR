@@ -310,7 +310,7 @@ namespace ITR {
         size_t half = p / 2;
 
         for (size_t value = 0; value < max; ++value) {
-            // TODO: The following works only if there are no more than 64 unique
+            // The following works only if there are no more than 64 unique
             // values.
             std::bitset<64> subset(value);
             if (subset.count() <= half) {

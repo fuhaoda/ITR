@@ -10,12 +10,10 @@
 namespace ITR {
 
     SearchEngine::SearchEngine(const Data *data, unsigned depth,
-                               unsigned nThreads) {
+                               unsigned nThreads):data_{data},depth_{depth}{
         if (depth != 1 && depth != 2 && depth != 3)
             throw "Invalid search depth!";
 
-        data_ = data;
-        depth_ = depth;
         nThreads_ = std::min(nThreads, std::thread::hardware_concurrency());
 
         // Compute the total number of searches to examine
@@ -139,8 +137,7 @@ namespace ITR {
             return;
         } else {
             if (curr < depth_ - 1) {
-                std::vector<size_t> cIdx1 = cIdx;
-                setChoicesHelper(vIdx, cIdx1, cBound, curr + 1, iter);
+                setChoicesHelper(vIdx, cIdx, cBound, curr + 1, iter);
             } else {
                 for (size_t d = 0; d < depth_; ++d) {
                     choices_[iter].vIdx[d] = vIdx[d];
@@ -159,13 +156,13 @@ namespace ITR {
         size_t first{0}, last{0};
         auto nChoice = choices_.size();
         auto choicePerWorker = nChoice / nThreads_;
-        auto remainder = nChoice % nThreads_;
+        auto choiceRemainder = nChoice % nThreads_;
 
-        if (tid < remainder) {
+        if (tid < choiceRemainder) {
             first = (choicePerWorker + 1) * tid;
             last = first + choicePerWorker + 1;
         } else {
-            first = choicePerWorker * tid + remainder;
+            first = choicePerWorker * tid + choiceRemainder;
             last = first + choicePerWorker;
         }
 
@@ -206,7 +203,7 @@ namespace ITR {
                 idx >>= (32 - 4 * remainder);
 
                 size_t j8 = nBatches << 3;
-                for (int k = remainder - 1; k >= 0; --k) {
+                for (int k = static_cast<int>(remainder) - 1; k >= 0; --k) {
                     v[idx & 0xF] += data_->resp(j8 + k);
                     idx >>= 4;
                 }
