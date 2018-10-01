@@ -61,7 +61,7 @@ namespace ITR {
         std::iota(index.begin(), index.end(), 0);
         std::partial_sort(index.begin(), index.begin() + nTop, index.end(),
                           [&](size_t i1, size_t i2) {
-                              return scores_[i1] > scores_[i2];
+                            return scores_[i1] > scores_[i2];
                           });
 
         for (size_t i = 0; i < nTop; ++i) {
@@ -180,6 +180,8 @@ namespace ITR {
 
             size_t remainder = nSample % 8;
             size_t nBatches = nSample >> 3;
+            //save the data into different buckets based on response and cut masks
+            // e.g. depth=3  can end up with 16 buckets 0000 0001 0010 0011 0100 0101 0110 0111 1000 1001 1010 1011 1100 1101 1110 1111
             for (size_t j = 0; j < nBatches; ++j) {
                 size_t idx = data_->act(j);
                 for (size_t d = 0; d < depth_; ++d)
