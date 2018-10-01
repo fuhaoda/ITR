@@ -7,7 +7,7 @@ ITR::ITR(std::string input, unsigned depth, unsigned nThreads) {
   // Load the input file
   std::cout << "Loading input data ...\n";
   data_ = std::make_unique<Data>(input);
-    
+  
   // Construct the search engine
   std::cout << "Creating search engine with depth " << depth << "\n";
   engine_ = std::make_unique<SearchEngine>(data_.get(), depth, nThreads);  
