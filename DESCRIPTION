@@ -1,12 +1,15 @@
 Package: ITR
 Type: Package
-Title: What the Package Does in One 'Title Case' Line
-Version: 1.0
+Title: Individualized Treatment Recommendation
+Version: 0.4.0
 Date: 2018-10-02
-Author: Your Name
-Maintainer: Your Name <your@email.com>
-Description: One paragraph description of what the package does as one
-        or more full sentences.
+Author: Bo Zhang, Haoda Fu, Jie Xue
+Maintainer: Bo Zhang <zhang_bo3@lilly.com> 
+Description: ITR implements the framework described in the paper "Estimated
+        Optimal Treatment Regimes via Subgruop Identification in Randomized
+        Control Trials and Observational Studies". 
 License: GPL (>= 2)
 Imports: Rcpp (>= 0.12.18)
 LinkingTo: Rcpp
+SystemRequirements: C++14
+
