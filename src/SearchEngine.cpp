@@ -49,6 +49,60 @@ void SearchEngine::run() {
             << nThreads_ << " threads\n";
 }
 
+void SearchEngine::sort(size_t &nTop) {
+  // Cap nTop
+  nTop = std::min(nTop, choices_.size());
+  
+  index_.resize(scores_.size()); 
+  std::iota(index_.begin(), index_.end(), 0); 
+  std::partial_sort(index_.begin(), index_.begin() + nTop, index_.end(), 
+                    [&](size_t i1, size_t i2) {
+                      return scores_[i1] > scores_[i2];
+                    });
+}
+
+NumericVector SearchEngine::topScore(size_t nTop) const {
+  NumericVector retval(nTop); 
+  
+  double T0 = data_->T0(); 
+  double scale = 1.0 / data_->nSample();
+  
+  for (size_t i = 0; i < nTop; ++i) {
+    size_t sID = index_[i]; // search ID 
+    retval[i] = (T0 + scores_[sID]) * scale; 
+  }
+  
+  return retval; 
+}
+
+NumericMatrix SearchEngine::topVar(size_t nTop) const {
+  NumericMatrix retval(nTop, depth_);
+  
+  for (size_t i = 0; i < nTop; ++i) {
+    size_t sID = index_[i];     // search ID
+    size_t cID = sID >> depth_; // choice ID
+    for (size_t d = 0; d < depth_; ++d)
+      retval(i, d) = choices_[cID].vIdx[d];
+  }
+  
+  return retval; 
+}
+
+NumericMatrix SearchEngine::topDir(size_t nTop) const {
+  NumericMatrix retval(nTop, depth_); 
+  
+  for (size_t i = 0; i < nTop; ++i) {
+    size_t sID = index_[i];             // search ID
+    size_t mask = sID % (1 << depth_);  // mask for cut direction
+    for (int d = depth_; d > 0; --d) {
+      retval(i, d - 1) = mask & 0x1; 
+      mask >>= 1; 
+    }
+  }
+  
+  return retval; 
+}
+
 void SearchEngine::report(size_t nTop) const {
   // Cap nTop
   nTop = std::min(nTop, choices_.size());

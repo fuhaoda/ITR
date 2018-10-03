@@ -1,8 +1,11 @@
 #ifndef __SEARCH_ENGINE_H__
 #define __SEARCH_ENGINE_H__
 
+#include <Rcpp.h>
 #include <vector>
 #include "Data.h"
+
+using namespace Rcpp; 
 
 class SearchEngine {
 public:
@@ -12,9 +15,21 @@ public:
   // Return the number of search choices to examine
   size_t nChoices() const { return choices_.size() << depth_; }
   
-  // Run the comprehensive search
+  // Run the comprehensive search.
   void run();
   
+  // Sort the results in descending orders of the scores 
+  void sort(size_t &nTop); 
+  
+  // Report the top search scores
+  NumericVector topScore(size_t nTop) const; 
+  
+  // Report the variables associated with the top search scores
+  NumericMatrix topVar(size_t nTop) const; 
+  
+  // Report the cut directions associated with the top search scores 
+  NumericMatrix topDir(size_t nTop) const; 
+
   // Report
   void report(size_t nTop) const;
   
@@ -36,6 +51,9 @@ private:
   
   // Values of the search scores_
   std::vector<double> scores_;
+  
+  // Order of the sorted scores
+  std::vector<size_t> index_; 
   
   // This function will loop through all combinations formed by choosing 'depth'
   // number of variables out of all available variables. For each combination
