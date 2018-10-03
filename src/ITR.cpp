@@ -30,12 +30,15 @@ NumericMatrix ITR::topVar() const {
   return engine_->topVar(nTop_); 
 }
 
-NumericMatrix ITR::topDir() const {
-  return engine_->topDir(nTop_); 
+List ITR::cut(size_t i) const {
+  // Cap i at nTop_
+  if (i > nTop_)
+    i = nTop_; 
+  return engine_->cut(i);  
 }
 
-void ITR::report(size_t nTop) const {
-  engine_->report(nTop); 
+NumericMatrix ITR::topDir() const {
+  return engine_->topDir(nTop_); 
 }
 
 RCPP_MODULE(ITR) {
@@ -43,12 +46,12 @@ RCPP_MODULE(ITR) {
 
   class_<ITR>("ITR")
     .constructor<std::string, unsigned, unsigned>()
-    .method("run", &ITR::run)
     .method("sort", &ITR::sort)
-    .method("topScore", &ITR::topScore)
-    .method("topVar", &ITR::topVar)
-    .method("topDir", &ITR::topDir)
-    .method("report", &ITR::report)
+    .const_method("run", &ITR::run)
+    .const_method("topScore", &ITR::topScore)
+    .const_method("topVar", &ITR::topVar)
+    .const_method("cut", &ITR::cut)
+    .const_method("topDir", &ITR::topDir)
   ;
 }
 

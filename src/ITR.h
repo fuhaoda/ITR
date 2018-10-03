@@ -27,15 +27,15 @@ public:
   // Return the index of the variables associated with the top scores 
   NumericMatrix topVar() const; 
   
+  // Return the cut information of score i
+  List cut(size_t i) const; 
+  
   // Return the directions of the cuts associated with the top scores
   // For a continuous or ordinal variable, direction 1 means < while direction
   // 0 means >= 
   // For a nominal variable, direction 1 means included while direction 0 means
   // excluded
   NumericMatrix topDir() const;
-  
-  // Report the top n search results
-  void report(size_t nTop) const;
   
 private:
   std::unique_ptr<Data> data_;

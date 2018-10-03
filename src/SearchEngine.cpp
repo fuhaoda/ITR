@@ -51,7 +51,7 @@ void SearchEngine::run() {
 
 void SearchEngine::sort(size_t &nTop) {
   // Cap nTop
-  nTop = std::min(nTop, choices_.size());
+  nTop = std::min(nTop, choices_.size() - 1);
   
   index_.resize(scores_.size()); 
   std::iota(index_.begin(), index_.end(), 0); 
@@ -88,6 +88,15 @@ NumericMatrix SearchEngine::topVar(size_t nTop) const {
   return retval; 
 }
 
+List SearchEngine::cut(size_t i) const {
+  size_t sID = index_[i];     // searchID
+  size_t cID = sID >> depth_; // choice ID
+  List out(depth_); 
+  for (size_t d = 0; d < depth_; ++d)
+    out[d] = data_->cutVal(choices_[cID].vIdx[d], choices_[cID].cIdx[d]); 
+  return out; 
+}
+
 NumericMatrix SearchEngine::topDir(size_t nTop) const {
   NumericMatrix retval(nTop, depth_); 
   
@@ -101,39 +110,6 @@ NumericMatrix SearchEngine::topDir(size_t nTop) const {
   }
   
   return retval; 
-}
-
-void SearchEngine::report(size_t nTop) const {
-  // Cap nTop
-  nTop = std::min(nTop, choices_.size());
-  
-  double T0 = data_->T0();
-  double scale = 1.0 / data_->nSample();
-  
-  // Sort the scores in descending order
-  std::vector<size_t> index(scores_.size());
-  std::iota(index.begin(), index.end(), 0);
-  std::partial_sort(index.begin(), index.begin() + nTop, index.end(),
-                    [&](size_t i1, size_t i2) {
-                      return scores_[i1] > scores_[i2];
-                    });
-  
-  for (size_t i = 0; i < nTop; ++i) {
-    // Each variable and cut combination corresponds to 2^depth searches
-    size_t sID = index[i];              // search ID
-    size_t cID = sID >> depth_;         // choice ID
-    size_t mask = sID % (1 << depth_);  // mask for cut direction
-    
-    double score = (T0 + scores_[sID]) * scale;
-    std::string rule{};
-    for (size_t d = 0; d < depth_; ++d)
-      rule += data_->cutInfo(choices_[cID].vIdx[d],
-                             choices_[cID].cIdx[d],
-                             mask & (1u << (depth_ - 1u - d)));
-    rule.pop_back();
-    rule.pop_back();
-    std::cout << "Score = " << score << ", Rule = " << rule << "\n";
-  }
 }
 
 void SearchEngine::combination(std::vector<size_t> curr,

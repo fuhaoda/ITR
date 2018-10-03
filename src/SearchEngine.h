@@ -27,12 +27,12 @@ public:
   // Report the variables associated with the top search scores
   NumericMatrix topVar(size_t nTop) const; 
   
+  // Report the cut value associated with score i
+  List cut(size_t i) const; 
+  
   // Report the cut directions associated with the top search scores 
   NumericMatrix topDir(size_t nTop) const; 
 
-  // Report
-  void report(size_t nTop) const;
-  
 private:
   const Data *data_;
   unsigned depth_;

@@ -60,13 +60,9 @@ public:
   const std::vector<std::uint32_t> &cutMask(size_t vIdx, size_t cIdx) const {
     return cvar_[vIdx].mask[cIdx];
   }
-  
-  // Print information about cut cIdx for variable vIdx with mask m.
-  // If vIdx is a continuous or ordinal variable,
-  // then m = 0 means < and m = 1 means >=
-  // If vIdx is a nominal variable,
-  // then m = 0 means \in and m = 1 means not \in
-  std::string cutInfo(size_t vIdx, size_t cIdx, bool m) const;
+
+  // Return the value of cut cIdx for variable vIdx
+  std::string cutVal(size_t vIdx, size_t cIdx) const; 
 
 private:
   size_t nSample_ = 0; // Sample size
