@@ -9,8 +9,6 @@
 #include "Data.h"
 #include "Covariate.h"
 
-namespace ITR {
-
 Data::Data(const std::string &input) {
   struct stat buffer{};
   if (stat(input.c_str(), &buffer) != 0)
@@ -374,5 +372,3 @@ std::string Data::cutInfo(size_t vIdx, size_t cIdx, bool m) const {
   
   return info.str();
 }
-
-} // namespace ITR

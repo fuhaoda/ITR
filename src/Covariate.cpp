@@ -4,8 +4,6 @@
 #include <utility>
 #include "Covariate.h"
 
-namespace ITR {
-
 void convertContToDeciles(std::vector<double> &cont,
                           std::vector<double> &decile) {
   decile.resize(10);
@@ -73,6 +71,3 @@ void convertNomToBitMasks(std::vector<int> &ord, const std::set<int> &uniq) {
   for (auto &v : ord)
     v = (1 << reverse_map[v]);
 }
-
-
-} // namespace ITR

@@ -1,20 +1,18 @@
 #include <iostream>
 #include "ITR.h"
 
-namespace ITR {
-
 ITR::ITR(std::string input, unsigned depth, unsigned nThreads) {
   // Load the input file
-  std::cout << "Loading input data ...\n";
+  Rprintf("Loading input data ...\n");
   data_ = std::make_unique<Data>(input);
-  
+
   // Construct the search engine
-  std::cout << "Creating search engine with depth " << depth << "\n";
+  Rprintf("Creating search engine with depth %d\n", depth); 
   engine_ = std::make_unique<SearchEngine>(data_.get(), depth, nThreads);  
 }
 
 void ITR::run() const {
-  std::cout << "Searching " << engine_->nChoices() << "  choices ...\n";
+  Rprintf("Searching %d choices ...\n", engine_->nChoices()); 
   engine_->run(); 
 }
 
@@ -22,4 +20,13 @@ void ITR::report(size_t nTop) const {
   engine_->report(nTop); 
 }
 
-} // namespace ITR
+RCPP_MODULE(ITR) {
+  using namespace Rcpp;
+
+  class_<ITR>("ITR")
+    .constructor<std::string, unsigned, unsigned>("Constructor")
+    .method("report", &ITR::report)
+    .method("run", &ITR::run)
+  ;
+}
+

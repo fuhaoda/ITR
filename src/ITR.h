@@ -1,13 +1,14 @@
 #ifndef __ITR_H__
 #define __ITR_H__
 
+#include <Rcpp.h>
 #include <string>
 #include <vector>
 #include <memory>
 #include "Data.h"
 #include "SearchEngine.h"
 
-namespace ITR {
+using namespace Rcpp; 
 
 class ITR {
 public:
@@ -24,8 +25,6 @@ private:
   std::unique_ptr<Data> data_;
   std::unique_ptr<SearchEngine> engine_;
 };
-
-} // namespace ITR
 
 #endif 
 

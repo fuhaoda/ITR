@@ -4,8 +4,6 @@
 #include <vector>
 #include "Data.h"
 
-namespace ITR {
-
 class SearchEngine {
 public:
   // Constructor
@@ -62,7 +60,5 @@ private:
   // This function is the worker of the search
   void worker(size_t tid);
 };
-
-} // namespace ITR
 
 #endif 
