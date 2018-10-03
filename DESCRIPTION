@@ -9,7 +9,9 @@ Description: ITR implements the framework described in the paper "Estimated
         Optimal Treatment Regimes via Subgruop Identification in Randomized
         Control Trials and Observational Studies". 
 License: GPL (>= 2)
+Depends: Rcpp (>= 0.12.18)
 Imports: Rcpp (>= 0.12.18)
 LinkingTo: Rcpp
+RcppModules: ITR
 SystemRequirements: C++14
 
