@@ -54,13 +54,13 @@ private:
   
   // This function sets the number of search options formed by the specified
   // choices of variables
-  void setChoices(const std::vector<size_t> &choices, size_t &iter);
+  void setChoices(const std::vector<size_t> &choices); //, size_t &iter);
   
   // This function is the helper function for setChoices
   void setChoicesHelper(const std::vector<size_t> &vIdx,
                         std::vector<size_t> cIdx,
                         std::vector<size_t> &cBound,
-                        size_t curr, size_t &iter);
+                        size_t curr); 
   
   // This function is the worker of the search
   void worker(size_t tid);

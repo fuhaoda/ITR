@@ -87,8 +87,6 @@ void SearchEngine::report(size_t nTop) const {
 
 void SearchEngine::combination(std::vector<size_t> curr,
                                std::vector<size_t> option, char mode) {
-  static size_t iter = 0;
-  
   // Get the number of variables to choose
   size_t nchoices = depth_ - curr.size();
   if (nchoices == 0) {
@@ -96,7 +94,7 @@ void SearchEngine::combination(std::vector<size_t> curr,
     if (mode == 'c') {
       countChoices(curr);
     } else {
-      setChoices(curr, iter);
+      setChoices(curr); 
     }
   } else if (option.size() < nchoices) {
     // Does not have enough to choose
@@ -120,8 +118,7 @@ void SearchEngine::countChoices(const std::vector<size_t> &choices) {
   totalChoices_ += nchoices;
 }
 
-void SearchEngine::setChoices(const std::vector<size_t> &choices,
-                              size_t &iter) {
+void SearchEngine::setChoices(const std::vector<size_t> &choices) {
   std::vector<size_t> cIdx;
   std::vector<size_t> cBound;
   for (const auto &vidx : choices) {
@@ -129,29 +126,28 @@ void SearchEngine::setChoices(const std::vector<size_t> &choices,
     cBound.push_back(data_->nCut(vidx));
   }
   
-  setChoicesHelper(choices, cIdx, cBound, 0, iter);
+  setChoicesHelper(choices, cIdx, cBound, 0); 
 }
 
 void SearchEngine::setChoicesHelper(const std::vector<size_t> &vIdx,
                                     std::vector<size_t> cIdx,
                                     std::vector<size_t> &cBound,
-                                    size_t curr, size_t &iter) {
+                                    size_t curr) { 
   if (cIdx[curr] == cBound[curr]) {
     return;
   } else {
     if (curr < depth_ - 1) {
-      setChoicesHelper(vIdx, cIdx, cBound, curr + 1, iter);
+      setChoicesHelper(vIdx, cIdx, cBound, curr + 1); 
     } else {
       for (size_t d = 0; d < depth_; ++d) {
         choices_[iter_].vIdx[d] = vIdx[d];
         choices_[iter_].cIdx[d] = cIdx[d];
       }
-      //iter++;
       iter_++; 
     }
     
     cIdx[curr]++;
-    setChoicesHelper(vIdx, cIdx, cBound, curr, iter);
+    setChoicesHelper(vIdx, cIdx, cBound, curr); 
   }
 }
 
