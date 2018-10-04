@@ -47,27 +47,13 @@ int main(int argc, char **argv) {
   }
   
   try {
-    // ITR::ITR instance{ifile, 3, nThreads};
-
+    ITR::ITR instance{ifile, 3, nThreads};
     
-    // // Run the search
-    // instance.run();
+    // Run the search
+    instance.run();
     
-    // // Retrive the top n treatment recommendations.
-    // instance.report(nTop);
-
-    ITR::ITR instance1("sample100.csv", 3, 1); 
-    //instance1.run();
-    //instance1.report(5);
-
-    ITR::ITR instance2("sample100-A.csv", 3, 2);
-    //instance2.run();
-    //instance2.report(5);
-
-    ITR::ITR instance3("sample100-B.csv", 3, 4);
-    //instance3.run();    
-    //instance3.report(5); 
-    
+    // Retrive the top n treatment recommendations.
+    instance.report(nTop);
   } catch (const char *msg) {
     std::cout << msg << "\n";
   }
