@@ -3,32 +3,24 @@
 \alias{ITR}
 \docType{package}
 \title{
-  A short title line describing what the package does
+  ITR
 }
 \description{
-  A more detailed description of what the package does. A length
-  of about one to five lines is recommended.
-}
-\details{
-  This section should provide a more detailed overview of how to use the
-  package, including the most important functions.
+  The `ITR` package provides a C++ library for the individualized treatment
+  recommendation. 
 }
 \author{
-Your Name, email optional.
+Bo Zhang, Haoda Fu, Jie Xue
 
-Maintainer: Your Name <your@email.com>
+Maintainer: Bo Zhang <zhang_bo3@lilly.com>
 }
 \references{
-  This optional section can contain literature or other references for
-  background information.
+  Fu, H., Zhou, J., and Faries, D. E. (2016) Estimating optimal treatment regimes
+  via subgroup identification in randomized control trials and observational 
+  studies. \emph{Statist. Med.}, 35:3285-3302. doi: 10.1002/sim.6920
 }
 \keyword{ package }
 \seealso{
-  Optional links to other man pages
-}
-\examples{
-  \dontrun{
-     ## Optional simple examples of the most important functions
-     ## These can be in \dontrun{} and \donttest{} blocks.   
-  }
+  Development for ITR can be followed via the GitHub repository at 
+  \url{https://github.com/EliLillyCo/ITR}. 
 }
