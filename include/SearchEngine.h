@@ -38,6 +38,9 @@ private:
   
   // Values of the search scores_
   std::vector<double> scores_;
+
+  // Position to store the next search choices
+  size_t iter_;   
   
   // This function will loop through all combinations formed by choosing 'depth'
   // number of variables out of all available variables. For each combination

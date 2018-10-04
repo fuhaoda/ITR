@@ -28,6 +28,7 @@ SearchEngine::SearchEngine(const Data *data, unsigned depth,
   scores_.resize(totalChoices_ << depth_);
   
   // Set all the search choices
+  iter_ = 0; 
   combination(std::vector<size_t>{}, vIdx, 's');
 }
 
@@ -142,10 +143,11 @@ void SearchEngine::setChoicesHelper(const std::vector<size_t> &vIdx,
       setChoicesHelper(vIdx, cIdx, cBound, curr + 1, iter);
     } else {
       for (size_t d = 0; d < depth_; ++d) {
-        choices_[iter].vIdx[d] = vIdx[d];
-        choices_[iter].cIdx[d] = cIdx[d];
+        choices_[iter_].vIdx[d] = vIdx[d];
+        choices_[iter_].cIdx[d] = cIdx[d];
       }
-      iter++;
+      //iter++;
+      iter_++; 
     }
     
     cIdx[curr]++;
