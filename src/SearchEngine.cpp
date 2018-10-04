@@ -100,7 +100,9 @@ NumericMatrix SearchEngine::var(size_t nTop) {
 List SearchEngine::cut(size_t i) {
   reportHelper(i);
 
-  size_t sID = index_[i];     // search ID
+  // i is passed through R where array index starts from 1. We need to use
+  // (i - 1) to access the value 
+  size_t sID = index_[i - 1];     // search ID
   size_t cID = sID >> depth_; // choice ID
   List out(depth_);
   for (size_t d = 0; d < depth_; ++d)
