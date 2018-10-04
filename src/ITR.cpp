@@ -16,29 +16,20 @@ void ITR::run() const {
   engine_->run(); 
 }
 
-void ITR::sort(size_t nTop) {
-  Rprintf("Sorting the top %d results ...\n", nTop);
-  engine_->sort(nTop);
-  nTop_ = nTop; 
+NumericVector ITR::score(size_t nTop) const {
+  return engine_->score(nTop); 
 }
 
-NumericVector ITR::topScore() const {
-  return engine_->topScore(nTop_); 
-}
-
-NumericMatrix ITR::topVar() const {
-  return engine_->topVar(nTop_); 
+NumericMatrix ITR::var(size_t nTop) const {
+  return engine_->var(nTop);
 }
 
 List ITR::cut(size_t i) const {
-  // Cap i at nTop_
-  if (i > nTop_)
-    i = nTop_; 
-  return engine_->cut(i);  
+  return engine_->cut(i); 
 }
 
-NumericMatrix ITR::topDir() const {
-  return engine_->topDir(nTop_); 
+NumericMatrix ITR::dir(size_t nTop) const {
+  return engine_->dir(nTop); 
 }
 
 RCPP_MODULE(ITR) {
@@ -46,12 +37,11 @@ RCPP_MODULE(ITR) {
 
   class_<ITR>("ITR")
     .constructor<std::string, unsigned, unsigned>()
-    .method("sort", &ITR::sort)
     .const_method("run", &ITR::run)
-    .const_method("topScore", &ITR::topScore)
-    .const_method("topVar", &ITR::topVar)
+    .const_method("score", &ITR::score)
+    .const_method("var", &ITR::var)
     .const_method("cut", &ITR::cut)
-    .const_method("topDir", &ITR::topDir)
+    .const_method("dir", &ITR::dir)
   ;
 }
 

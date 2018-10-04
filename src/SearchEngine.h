@@ -17,21 +17,18 @@ public:
   
   // Run the comprehensive search.
   void run();
-  
-  // Sort the results in descending orders of the scores 
-  void sort(size_t &nTop); 
-  
-  // Report the top search scores
-  NumericVector topScore(size_t nTop) const; 
-  
-  // Report the variables associated with the top search scores
-  NumericMatrix topVar(size_t nTop) const; 
-  
-  // Report the cut value associated with score i
-  List cut(size_t i) const; 
-  
-  // Report the cut directions associated with the top search scores 
-  NumericMatrix topDir(size_t nTop) const; 
+
+  // Report the scores of the top n searches
+  NumericVector score(size_t nTop); 
+
+  // Report the variables associated with the top n searches
+  NumericMatrix var(size_t nTop); 
+
+  // Report the cut value associated with top score i
+  List cut(size_t i); 
+
+  // Report the cut directions associated with the top n search scores
+  NumericMatrix dir(size_t nTop); 
 
 private:
   const Data *data_;
@@ -54,6 +51,9 @@ private:
 
   // Position to store the next search choices
   size_t iter_; 
+
+  // Number of scores have been sorted
+  size_t nTop_; 
   
   // Order of the sorted scores
   std::vector<size_t> index_; 
@@ -80,6 +80,9 @@ private:
   
   // This function is the worker of the search
   void worker(size_t tid);
+
+  // This is the helper function for various report functions
+  void reportHelper(size_t &nTop); 
 };
 
 #endif 

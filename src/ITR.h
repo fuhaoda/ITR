@@ -17,30 +17,26 @@ public:
   
   // Run the comprehensive search
   void run() const;
-  
-  // Sort the search results in descending orders of the scores
-  void sort(size_t nTop); 
-  
-  // Return the top scores 
-  NumericVector topScore() const; 
-  
-  // Return the index of the variables associated with the top scores 
-  NumericMatrix topVar() const; 
-  
-  // Return the cut information of score i
+
+  // Get the scores of the top n searches
+  NumericVector score(size_t nTop) const; 
+
+  // Get the index of the variables associated with the top scores
+  NumericMatrix var(size_t nTop) const; 
+
+  // Return the cut information of top score i
   List cut(size_t i) const; 
-  
-  // Return the directions of the cuts associated with the top scores
+
+  // Return the directions of the cuts associated with the top scores. 
   // For a continuous or ordinal variable, direction 1 means < while direction
-  // 0 means >= 
+  // 0 means >=.
   // For a nominal variable, direction 1 means included while direction 0 means
-  // excluded
-  NumericMatrix topDir() const;
-  
+  // excluded.
+  NumericMatrix dir(size_t nTop) const;
+
 private:
   std::unique_ptr<Data> data_;
   std::unique_ptr<SearchEngine> engine_;
-  size_t nTop_; 
 };
 
 #endif 
