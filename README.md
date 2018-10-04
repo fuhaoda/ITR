@@ -1,8 +1,8 @@
 # ITR (Individualized Treatment Recommendation) 
 
-ITR is a library implementing the framework described in the paper _Estimating
+ITR is a library implementing the framework described in the paper [_Estimating
   Optimal Treatment Regimes via Subgroup Identification in Randomized Control
-  Trials and Observational Studies_ by Haoda Fu, Jin Zhou, Douglas E. Faries. 
+  Trials and Observational Studies_ by Haoda Fu, Jin Zhou, Douglas E. Faries](https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.6920). 
   
 The library is implemented in C++ and can be built with `cmake` version 3.12 or
   later. The library has been tested with `gcc` version 8.1.0 and `clang`
