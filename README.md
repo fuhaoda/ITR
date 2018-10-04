@@ -11,7 +11,7 @@ issuing
 ```
 
 # Usage
-Create an ITR instance. The constructor takes three arguments: the path to 
+- Create an ITR instance. The constructor takes three arguments: the path to 
 the input data file, the depth of the search, and the number of threads to 
 run the search. 
 ```
@@ -19,18 +19,18 @@ run the search.
 Loading input data ...
 Creating search engine with depth 3
 ```
-Run the search 
+- Run the search 
 ```
 > itr$run()
 Searching 689048 choices ...
 Completed in 1.093183e-02 seconds using 8 threads
 ```
-Get the scores of the best 5 searches. 
+- Get the scores of the best 5 searches. 
 ```
 > itr$score(5) 
 [1] 68.84978 67.87278 67.44488 67.42991 67.40870
 ```
-Get the variables associated with the best 5 searches
+- Get the variables associated with the best 5 searches
 ```
 > itr$var(5)
      [,1] [,2] [,3]
@@ -40,7 +40,7 @@ Get the variables associated with the best 5 searches
 [4,]    1    5    6
 [5,]    1    6    8
 ```
-Get the cut information of the ith best result
+- Get the cut information of the ith best result
 ```
 > itr$cut(1)
 [[1]]
@@ -52,7 +52,7 @@ Get the cut information of the ith best result
 [[3]]
 [1] "0 2 "
 ```
-Get the directions of the cuts. For a continuous or ordinal variable, direction 
+- Get the directions of the cuts. For a continuous or ordinal variable, direction 
 1 means < and direction 0 means >=. For a nominal variable, direction 1 means
 included and direction 0 means excluded. 
 ```
