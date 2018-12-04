@@ -7,6 +7,8 @@
 #include "SearchEngine.h"
 #include <cstdio>
 
+namespace ITR {
+
 SearchEngine::SearchEngine(const Data *data, unsigned depth,
                            unsigned nThreads)
   : data_{data}, depth_{depth}
@@ -261,4 +263,6 @@ void SearchEngine::worker(size_t tid) {
     for (size_t j = 0; j < stride; ++j)
       ans[j] = v[2 * j + 1] - v[2 * j];
   }
+}
+
 }

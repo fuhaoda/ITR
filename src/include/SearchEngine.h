@@ -7,6 +7,8 @@
 
 using namespace Rcpp; 
 
+namespace ITR {
+
 class SearchEngine {
 public:
   // Constructor
@@ -84,5 +86,7 @@ private:
   // This is the helper function for various report functions
   void reportHelper(size_t &nTop); 
 };
+
+} // namespace ITR
 
 #endif 

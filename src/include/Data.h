@@ -7,6 +7,8 @@
 #include <set>
 #include <cstdint>
 
+namespace ITR {
+
 // The first column is ID, followed by continuous variables, ordinal categorical
 // variables, nominal categorial variables, actions, responses, and probability
 // of treatment assignment. We require variables start with Cont, Ord, Nom, Y
@@ -152,5 +154,7 @@ private:
   // This function sets up the cut masks for the ith nominal variable
   void setNomCutMasks(size_t i, const std::vector<int> &data);
 };
+
+} // namespace ITR
 
 #endif 

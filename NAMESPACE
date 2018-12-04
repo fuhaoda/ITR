@@ -1,2 +1,2 @@
-export(ITR)
+export(ITR::ITR)
 useDynLib(ITR)

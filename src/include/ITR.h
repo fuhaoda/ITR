@@ -10,6 +10,8 @@
 
 using namespace Rcpp; 
 
+namespace ITR {
+
 class ITR {
 public:
   // Constructor
@@ -38,6 +40,8 @@ private:
   std::unique_ptr<Data> data_;
   std::unique_ptr<SearchEngine> engine_;
 };
+
+} // namespace ITR
 
 #endif 
 
