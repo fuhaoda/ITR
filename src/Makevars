@@ -1,1 +1,1 @@
-PKG_CXXFLAGS += -I./include
+PKG_CXXFLAGS += -I../include -DUSE_RCPP
