@@ -9,7 +9,6 @@
 #include "Data.h"
 #include "Covariate.h"
 
-namespace ITR {
 
 Data::Data(const std::string &input) {
   struct stat buffer{};
@@ -369,4 +368,13 @@ std::string Data::cutVal(size_t vIdx, size_t cIdx) const {
   return info.str();
 }
 
-} // namespace ITR
+std::string Data::cutDir(size_t vIdx, size_t m) const {
+  std::string str; 
+  if (vIdx < nCont_ + nOrd_) {
+    str = (m ? " < " : " >= ");
+  } else {
+    str = (m ? " in " : " not in ");
+  }
+
+  return str;
+}

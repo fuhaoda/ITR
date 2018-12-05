@@ -5,9 +5,6 @@
 #include <numeric>
 #include <iostream>
 #include "SearchEngine.h"
-#include <cstdio>
-
-namespace ITR {
 
 SearchEngine::SearchEngine(const Data *data, unsigned depth,
                            unsigned nThreads)
@@ -71,10 +68,10 @@ void SearchEngine::reportHelper(size_t &nTop) {
   }  
 }
 
-NumericVector SearchEngine::score(size_t nTop) {
+rVector SearchEngine::score(size_t nTop) {
   reportHelper(nTop);
 
-  NumericVector retval(nTop); 
+  rVector retval(nTop); 
   double T0 = data_->T0();
   double scale = 1.0 / data_->nSample();
   for (size_t i = 0; i < nTop; ++i) {
@@ -85,10 +82,10 @@ NumericVector SearchEngine::score(size_t nTop) {
   return retval;
 }
     
-NumericMatrix SearchEngine::var(size_t nTop) {
+uMatrix SearchEngine::var(size_t nTop) {
   reportHelper(nTop);
      
-  NumericMatrix retval(nTop, depth_);  
+  uMatrix retval(nTop, depth_);  
   for (size_t i = 0; i < nTop; ++i) {
     size_t sID = index_[i];     // search ID
     size_t cID = sID >> depth_; // choice ID
@@ -99,36 +96,43 @@ NumericMatrix SearchEngine::var(size_t nTop) {
   return retval; 
 }
 
-List SearchEngine::cut(size_t i) {
+sVector SearchEngine::cut(size_t i) {
   reportHelper(i);
 
+#ifdef USE_RCPP   
   // i is passed through R where array index starts from 1. We need to use
-  // (i - 1) to access the value 
-  size_t sID = index_[i - 1];     // search ID
+  // (i - 1) to access the value
+  i--; 
+#endif   
+  size_t sID = index_[i]; //index_[i - 1];     // search ID
   size_t cID = sID >> depth_; // choice ID
-  List out(depth_);
+  sVector out(depth_);
   for (size_t d = 0; d < depth_; ++d)
     out[d] = data_->cutVal(choices_[cID].vIdx[d], choices_[cID].cIdx[d]);
 
   return out;
 }
   
-NumericMatrix SearchEngine::dir(size_t nTop) {
-  reportHelper(nTop);
-  
-  NumericMatrix retval(nTop, depth_);   
-  for (size_t i = 0; i < nTop; ++i) {
-    size_t sID = index_[i];             // search ID
-    size_t mask = sID % (1 << depth_);  // mask for cut direction
-    for (int d = depth_; d > 0; --d) {
-      retval(i, d - 1) = mask & 0x1; 
-      mask >>= 1; 
-    }
-  }
-  
-  return retval; 
-}
+sVector SearchEngine::dir(size_t i) {
+  reportHelper(i);
 
+#ifdef USE_RCPP
+  // i is passed through R where array index starts from 1. We need to use
+  // (i - 1) to access the value 
+  i--; 
+#endif
+  size_t sID = index_[i]; // search ID
+  size_t cID = sID >> depth_; // choice ID  
+  size_t mask = sID % (1 << depth_); 
+  sVector out(depth_);
+
+  for (size_t d = 0; d < depth_; ++d) 
+    out[d] = data_->cutDir(choices_[cID].vIdx[d],
+                           mask & (1u << (depth_ - 1u - d)));
+
+  return out;
+}
+  
 void SearchEngine::combination(std::vector<size_t> curr,
                                std::vector<size_t> option, char mode) {
   // Get the number of variables to choose
@@ -263,6 +267,4 @@ void SearchEngine::worker(size_t tid) {
     for (size_t j = 0; j < stride; ++j)
       ans[j] = v[2 * j + 1] - v[2 * j];
   }
-}
-
 }
