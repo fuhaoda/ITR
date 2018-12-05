@@ -7,8 +7,6 @@
 #include <set>
 #include <cstdint>
 
-namespace ITR {
-
 // The first column is ID, followed by continuous variables, ordinal categorical
 // variables, nominal categorial variables, actions, responses, and probability
 // of treatment assignment. We require variables start with Cont, Ord, Nom, Y
@@ -64,7 +62,10 @@ public:
   }
 
   // Return the value of cut cIdx for variable vIdx
-  std::string cutVal(size_t vIdx, size_t cIdx) const; 
+  std::string cutVal(size_t vIdx, size_t cIdx) const;
+
+  // Return the string representation for the cut direction of variable vIdx
+  std::string cutDir(size_t vIdx, size_t m) const; 
 
 private:
   size_t nSample_ = 0; // Sample size
@@ -154,7 +155,5 @@ private:
   // This function sets up the cut masks for the ith nominal variable
   void setNomCutMasks(size_t i, const std::vector<int> &data);
 };
-
-} // namespace ITR
 
 #endif 

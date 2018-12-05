@@ -4,7 +4,6 @@
 #include <vector>
 #include <set>
 
-namespace ITR {
 
 // This function converts the value of continuous variables into deciles
 void convertContToDeciles(std::vector<double> &cont, std::vector<double> &decile);
@@ -17,7 +16,5 @@ void convertOrdToRanks(std::vector<int> &arr, const std::set<int> &uniq);
 // order of value v in the unique set is rank, the corresponding bitmask is
 // 1 << rank
 void convertNomToBitMasks(std::vector<int> &arr, const std::set<int> &uniq);
-
-} // namespace ITR
 
 #endif

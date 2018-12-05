@@ -1,13 +1,9 @@
 #ifndef __SEARCH_ENGINE_H__
 #define __SEARCH_ENGINE_H__
 
-#include <Rcpp.h>
 #include <vector>
 #include "Data.h"
-
-using namespace Rcpp; 
-
-namespace ITR {
+#include "Types.h"
 
 class SearchEngine {
 public:
@@ -21,17 +17,17 @@ public:
   void run();
 
   // Report the scores of the top n searches
-  NumericVector score(size_t nTop); 
+  rVector score(size_t nTop); 
 
   // Report the variables associated with the top n searches
-  NumericMatrix var(size_t nTop); 
+  uMatrix var(size_t nTop); 
 
   // Report the cut value associated with top score i
-  List cut(size_t i); 
+  sVector cut(size_t i); 
 
-  // Report the cut directions associated with the top n search scores
-  NumericMatrix dir(size_t nTop); 
-
+  // Report the cut direction associated with top score i
+  sVector dir(size_t i); 
+  
 private:
   const Data *data_;
   unsigned depth_;
@@ -86,7 +82,5 @@ private:
   // This is the helper function for various report functions
   void reportHelper(size_t &nTop); 
 };
-
-} // namespace ITR
 
 #endif 
