@@ -47,13 +47,26 @@ int main(int argc, char **argv) {
   }
   
   try {
-    ITR::ITR instance{ifile, 3, nThreads};
+    ITR instance{ifile, 3, nThreads};
     
     // Run the search
     instance.run();
     
     // Retrive the top n treatment recommendations.
-    instance.report(nTop);
+    auto scores = instance.score(5);
+    auto var = instance.var(5);
+
+    for (size_t i = 0; i < nTop; ++i) {
+      auto cut = instance.cut(i);
+      auto dir = instance.dir(i);
+      std::cout << "Score = " << scores[i] << ", "
+                << "X" << var(i, 0)
+                << dir[0] << cut[0] << ", "
+                << "X" << var(i, 1)
+                << dir[1] << cut[1] << ", "
+                << "X" << var(i, 2)
+                << dir[2] << cut[2] << "\n";
+    }
   } catch (const char *msg) {
     std::cout << msg << "\n";
   }

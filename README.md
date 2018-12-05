@@ -1,17 +1,21 @@
 # ITR (Individualized Treatment Recommendation) 
 
-ITR is a library implementing the framework described in the paper [_Estimating
-  Optimal Treatment Regimes via Subgroup Identification in Randomized Control
+ITR is a library implementing the framework described in the paper
+[_Estimating Optimal Treatment Regimes via Subgroup Identification in Randomized Control
   Trials and Observational Studies_ by Haoda Fu, Jin Zhou, Douglas E. Faries](https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.6920). 
-  
-The library is implemented in C++ and can be built with `cmake` version 3.12 or
-  later. The library has been tested with `gcc` version 8.1.0 and `clang`
-  version 9.1.0.  
 
-## Installation 
-Assume the source code has been unpacked into directory `/path/to/ITR`, the
-  following steps will build the library in `/path/to/ITR-build` and install the
-  library in `/path/to/ITR-install`.  
+## Installation
+
+The library is implemented in C++ and exported as a module to R using Rcpp.
+
+### C++ Library
+The library can be built as a static library using `cmake` version 3.12 or
+later. The library has been tested with `gcc` version 8.1.0 and `clang` version
+9.1.0. 
+
+Assume the source code has been unpacked to `/path/to/ITR`, the following steps
+will build the library in `/path/to/ITR-build` and install the library in
+`/path/to/ITR-install`.
 
 ```
 > cd /path/to/ITR-build
@@ -20,71 +24,98 @@ Assume the source code has been unpacked into directory `/path/to/ITR`, the
 > make install
 ```
 
-This will install header file `ITR.h`, `Data.h`, and `SearchEngine.h`
-  to `/path/to/ITR-install/include/itr` and
-  `libitr.a` to `path/to/ITR-install/lib`.  One could also specify a particular compiler by
-  prefixing
-  `CC=/path/to/c_compiler CXX=/path/to/cpp_compiler` to the `cmake`
-  configuration line.  
+This will install header file `ITR.h`, `Data.h`, `SearchEngine.h`, and `Types.h`
+to `/path/to/ITR-install/include/itr` and `libitr.a` to
+`/path/to/ITR-install/lib`. One could also specify a particular compiler by
+prefixing `CC=/path/to/c_compiler CXX=/path/to/cpp_compiler` to the `cmake`
+configuration line.
 
-## Usage
-The `demo` directory contains a simple example `demo.cpp` showing how to use the
-  library. A simple digest of this example is given below.
 
-To use the library, one needs to include the header file `ITR.h`. 
 
-  Inside `main`, one first creates an `ITR::ITR` instance. The non-type parameter
-  specifies the depth of the search, where the valid values are 1, 2, or 3.
-  Additionally, the constructor takes two arguments: The first one 
-  is a `std::string` object specifying the path
-  to the input csv file, and the second one is the number of threads used in the search. 
-Here, one has the choice of running the search sequentially or in
-  parallel by passing an `unsigned` integer `nThreads` to the method. If
-  `nThreads` is 1, the search is done sequentially. If `nThreads` is greater
-  than 1, the search is done in parallel.
-  
-For the csv input file, the first line must be a header. The first column is the
-  subject identifier, followed by continuous variables (labeled as cont*),
-  ordinal variables (labeled as ord*), nominal variables (nom*), actions (A*),
-  responses (Y*), and condition probablity P(A = 1 | X). The ITR library is case
-  insensitive to these labels. The constructor of `ITR::ITR` will throw an exception if the input file does not
-  exist or the search depth is invalid. 
 
-Once the search completes, one can query the top `n` search results by calling
-  the `report` method. 
 
-Generally, one needs to provide `-I/path/to/ITR-install/include/itr` and
-  `-L/path/to/ITR-install/lib -litr` to the compile command. For the `demo`
-  example, it can be built as follows
 
+## Installation
+
+The R version of the library is implemented using Rcpp and can be installed by 
+issuing 
 ```
-> cd /path/to/ITR-build/demo
-> make demo
-> ./demo
+> R CMD INSTALL ITR_0.4.0.tar.gz 
 ```
 
-We add a few options to the `demo` program, which can be found by
+# Usage
+- Create an ITR instance. The constructor takes three arguments: the path to 
+the input data file, the depth of the search, and the number of threads to 
+run the search. 
 ```
-> .demo
-Usage: ./demo [OPTIONS]
---data=STRING  Path to input file, default is sample100.csv
---thread=NUM   Number of threads to use, default is 1
---best=NUM     Number of top results to display, default is 5
-```
-
-An sample output of the `demo` program looks like
-```
-> ./demo --thread=8
+> itr <- new(ITR, 'sample100.csv', 3, 8)
 Loading input data ...
 Creating search engine with depth 3
-Searching 689048 choices ...
-Completed in 5.079716e-03 seconds using 8 threads
-Score = 6.884978e+01, rule =  X1 < 49.8351,  X2 >= 49.6823,  X7 not in {0, 2} 
-Score = 6.787278e+01, rule =  X1 < 58.8109,  X6 not in {2, 3},  X7 not in {2, 3} 
-Score = 6.744488e+01, rule =  X1 < 49.8351,  X7 not in {0, 2},  X8 not in {2} 
-Score = 6.742991e+01, rule =  X1 < 42.1108,  X5 < 3,  X6 not in {2, 3} 
-Score = 6.740870e+01, rule =  X1 < 49.8351,  X6 not in {0, 2},  X8 not in {2} 
 ```
+- Run the search 
+```
+> itr$run()
+Searching 689048 choices ...
+Completed in 1.093183e-02 seconds using 8 threads
+```
+- Get the scores of the best 5 searches. 
+```
+> itr$score(5) 
+[1] 68.84978 67.87278 67.44488 67.42991 67.40870
+```
+- Get the variables associated with the best 5 searches
+```
+> itr$var(5)
+     [,1] [,2] [,3]
+[1,]    1    2    7
+[2,]    1    6    7
+[3,]    1    7    8
+[4,]    1    5    6
+[5,]    1    6    8
+```
+- Get the cut information of the ith best result
+```
+> itr$cut(1)
+[[1]]
+[1] "49.8351 (percentile 50)"
+
+[[2]]
+[1] "49.6823 (percentile 20)"
+
+[[3]]
+[1] "0 2 "
+```
+- Get the directions of the cuts. For a continuous or ordinal variable, direction 
+1 means < and direction 0 means >=. For a nominal variable, direction 1 means
+included and direction 0 means excluded. 
+```
+> itr$dir(5)
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    1    0    0
+[3,]    1    0    0
+[4,]    1    1    0
+[5,]    1    0    0
+```
+
+
+The package requires C++14, so you may still encounter an error.
+
+```
+Error in .shlib_internal(args) :
+  C++14 standard requested but CXX14 is not defined
+```
+
+If that is the case, create a personal `~/.R/Makevars` file with the following lines.
+
+```
+CXX14 = g++ # or the full path to your C++14 compliant compiler
+CXX14FLAGS = -O2 -g $(LTO)
+CXX14PICFLAGS = -fPIC
+CXX14STD = -std=c++14
+```
+
+On a shared cluster, if your `CXX14` variable does not have the full path to `g++`, you may need to load the `gcc` environment module (i.e. run `module load gcc`).
 
 ## Authors
 Bo Zhang (zhang_bo3 at lilly.com)
@@ -92,5 +123,3 @@ Bo Zhang (zhang_bo3 at lilly.com)
 Jie Xue  (xue_jie at lilly.com)
 
 Haoda Fu (fu_haoda at lilly.com)
-
-

@@ -3,8 +3,7 @@
 
 #include <vector>
 #include "Data.h"
-
-namespace ITR {
+#include "Types.h"
 
 class SearchEngine {
 public:
@@ -14,11 +13,20 @@ public:
   // Return the number of search choices to examine
   size_t nChoices() const { return choices_.size() << depth_; }
   
-  // Run the comprehensive search
+  // Run the comprehensive search.
   void run();
-  
-  // Report
-  void report(size_t nTop) const;
+
+  // Report the scores of the top n searches
+  rVector score(size_t nTop); 
+
+  // Report the variables associated with the top n searches
+  uMatrix var(size_t nTop); 
+
+  // Report the cut value associated with top score i
+  sVector cut(size_t i); 
+
+  // Report the cut direction associated with top score i
+  sVector dir(size_t i); 
   
 private:
   const Data *data_;
@@ -40,7 +48,13 @@ private:
   std::vector<double> scores_;
 
   // Position to store the next search choices
-  size_t iter_;   
+  size_t iter_; 
+
+  // Number of scores have been sorted
+  size_t nTop_; 
+  
+  // Order of the sorted scores
+  std::vector<size_t> index_; 
   
   // This function will loop through all combinations formed by choosing 'depth'
   // number of variables out of all available variables. For each combination
@@ -54,7 +68,7 @@ private:
   
   // This function sets the number of search options formed by the specified
   // choices of variables
-  void setChoices(const std::vector<size_t> &choices); //, size_t &iter);
+  void setChoices(const std::vector<size_t> &choices); 
   
   // This function is the helper function for setChoices
   void setChoicesHelper(const std::vector<size_t> &vIdx,
@@ -64,8 +78,9 @@ private:
   
   // This function is the worker of the search
   void worker(size_t tid);
-};
 
-} // namespace ITR
+  // This is the helper function for various report functions
+  void reportHelper(size_t &nTop); 
+};
 
 #endif 

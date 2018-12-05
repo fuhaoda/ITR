@@ -5,9 +5,6 @@
 #include <numeric>
 #include <iostream>
 #include "SearchEngine.h"
-#include <cstdio>
-
-namespace ITR {
 
 SearchEngine::SearchEngine(const Data *data, unsigned depth,
                            unsigned nThreads)
@@ -30,6 +27,10 @@ SearchEngine::SearchEngine(const Data *data, unsigned depth,
   // Set all the search choices
   iter_ = 0; 
   combination(std::vector<size_t>{}, vIdx, 's');
+
+  // None of the search scores have been sorted
+  nTop_ = 0;
+  index_.resize(scores_.size()); 
 }
 
 void SearchEngine::run() {
@@ -52,39 +53,86 @@ void SearchEngine::run() {
             << nThreads_ << " threads\n";
 }
 
-void SearchEngine::report(size_t nTop) const {
+void SearchEngine::reportHelper(size_t &nTop) {
   // Cap nTop
-  nTop = std::min(nTop, choices_.size());
-  
-  double T0 = data_->T0();
-  double scale = 1.0 / data_->nSample();
-  
-  // Sort the scores in descending order
-  std::vector<size_t> index(scores_.size());
-  std::iota(index.begin(), index.end(), 0);
-  std::partial_sort(index.begin(), index.begin() + nTop, index.end(),
-                    [&](size_t i1, size_t i2) {
-                      return scores_[i1] > scores_[i2];
-                    });
-  
-  for (size_t i = 0; i < nTop; ++i) {
-    // Each variable and cut combination corresponds to 2^depth searches
-    size_t sID = index[i];              // search ID
-    size_t cID = sID >> depth_;         // choice ID
-    size_t mask = sID % (1 << depth_);  // mask for cut direction
-    
-    double score = (T0 + scores_[sID]) * scale;
-    std::string rule{};
-    for (size_t d = 0; d < depth_; ++d)
-      rule += data_->cutInfo(choices_[cID].vIdx[d],
-                             choices_[cID].cIdx[d],
-                             mask & (1u << (depth_ - 1u - d)));
-    rule.pop_back();
-    rule.pop_back();
-    std::cout << "Score = " << score << ", Rule = " << rule << "\n";
-  }
+  nTop = std::min(nTop, scores_.size() - 1);
+
+  if (nTop > nTop_) {
+    // We need to sort again
+    nTop_ = nTop;
+    std::iota(index_.begin(), index_.end(), 0);
+    std::partial_sort(index_.begin(), index_.begin() + nTop_, index_.end(),
+                      [&](size_t i1, size_t i2) {
+                        return scores_[i1] > scores_[i2];
+                      });
+  }  
 }
 
+rVector SearchEngine::score(size_t nTop) {
+  reportHelper(nTop);
+
+  rVector retval(nTop); 
+  double T0 = data_->T0();
+  double scale = 1.0 / data_->nSample();
+  for (size_t i = 0; i < nTop; ++i) {
+    size_t sID = index_[i]; // search ID
+    retval[i] = (T0 + scores_[sID]) * scale;
+  }
+
+  return retval;
+}
+    
+uMatrix SearchEngine::var(size_t nTop) {
+  reportHelper(nTop);
+     
+  uMatrix retval(nTop, depth_);  
+  for (size_t i = 0; i < nTop; ++i) {
+    size_t sID = index_[i];     // search ID
+    size_t cID = sID >> depth_; // choice ID
+    for (size_t d = 0; d < depth_; ++d)
+      retval(i, d) = choices_[cID].vIdx[d];
+  }
+  
+  return retval; 
+}
+
+sVector SearchEngine::cut(size_t i) {
+  reportHelper(i);
+
+#ifdef USE_RCPP   
+  // i is passed through R where array index starts from 1. We need to use
+  // (i - 1) to access the value
+  i--; 
+#endif   
+  size_t sID = index_[i]; //index_[i - 1];     // search ID
+  size_t cID = sID >> depth_; // choice ID
+  sVector out(depth_);
+  for (size_t d = 0; d < depth_; ++d)
+    out[d] = data_->cutVal(choices_[cID].vIdx[d], choices_[cID].cIdx[d]);
+
+  return out;
+}
+  
+sVector SearchEngine::dir(size_t i) {
+  reportHelper(i);
+
+#ifdef USE_RCPP
+  // i is passed through R where array index starts from 1. We need to use
+  // (i - 1) to access the value 
+  i--; 
+#endif
+  size_t sID = index_[i]; // search ID
+  size_t cID = sID >> depth_; // choice ID  
+  size_t mask = sID % (1 << depth_); 
+  sVector out(depth_);
+
+  for (size_t d = 0; d < depth_; ++d) 
+    out[d] = data_->cutDir(choices_[cID].vIdx[d],
+                           mask & (1u << (depth_ - 1u - d)));
+
+  return out;
+}
+  
 void SearchEngine::combination(std::vector<size_t> curr,
                                std::vector<size_t> option, char mode) {
   // Get the number of variables to choose
@@ -132,7 +180,7 @@ void SearchEngine::setChoices(const std::vector<size_t> &choices) {
 void SearchEngine::setChoicesHelper(const std::vector<size_t> &vIdx,
                                     std::vector<size_t> cIdx,
                                     std::vector<size_t> &cBound,
-                                    size_t curr) { 
+                                    size_t curr) {
   if (cIdx[curr] == cBound[curr]) {
     return;
   } else {
@@ -143,7 +191,7 @@ void SearchEngine::setChoicesHelper(const std::vector<size_t> &vIdx,
         choices_[iter_].vIdx[d] = vIdx[d];
         choices_[iter_].cIdx[d] = cIdx[d];
       }
-      iter_++; 
+      iter_++;
     }
     
     cIdx[curr]++;
@@ -220,6 +268,3 @@ void SearchEngine::worker(size_t tid) {
       ans[j] = v[2 * j + 1] - v[2 * j];
   }
 }
-
-
-} // namespace ITR

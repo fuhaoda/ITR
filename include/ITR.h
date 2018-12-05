@@ -6,26 +6,32 @@
 #include <memory>
 #include "Data.h"
 #include "SearchEngine.h"
-
-namespace ITR {
+#include "Types.h"
 
 class ITR {
 public:
   // Constructor
-  explicit ITR(std::string input, unsigned depth = 3, unsigned nThreads = 1);
+  ITR(std::string input, unsigned depth, unsigned nThreads);
   
   // Run the comprehensive search
   void run() const;
-  
-  // Report the top n search results
-  void report(size_t nTop = 1) const;
+
+  // Get the scores of the top n searches
+  rVector score(size_t nTop) const; 
+
+  // Get the index of the variables associated with the top scores
+  uMatrix var(size_t nTop) const; 
+
+  // Return the cut information of top score i
+  sVector cut(size_t i) const; 
+
+  // Return the direction of the cuts associated with top score i
+  sVector dir(size_t i) const; 
   
 private:
   std::unique_ptr<Data> data_;
   std::unique_ptr<SearchEngine> engine_;
 };
-
-} // namespace ITR
 
 #endif 
 

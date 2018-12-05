@@ -9,7 +9,6 @@
 #include "Data.h"
 #include "Covariate.h"
 
-namespace ITR {
 
 Data::Data(const std::string &input) {
   struct stat buffer{};
@@ -347,32 +346,35 @@ void Data::setNomCutMasks(size_t i, const std::vector<int> & data) {
   }
 }
 
-std::string Data::cutInfo(size_t vIdx, size_t cIdx, bool m) const {
+std::string Data::cutVal(size_t vIdx, size_t cIdx) const {
   std::stringstream info;
   if (vIdx < nCont_) {
-    info << " X" << vIdx << (m ? " < " : " >= ")
-         << decile_[vIdx][cIdx] << ", ";
+    info << decile_[vIdx][cIdx] << " (percentile " << (cIdx + 1) * 10 << ")";
   } else if (vIdx < nCont_ + nOrd_) {
-    info << " X" << vIdx << (m ? " < " : " >= ")
-         << cvar_[vIdx].value[cIdx] << ", ";
+    info << cvar_[vIdx].value[cIdx] << " (" << cIdx + 1 << " out of " 
+         << uniqNom_[vIdx - nCont_].size() << ")";
   } else {
-    info << " X" << vIdx << (m ? " in " : " not in ") << "{";
     auto subset = cvar_[vIdx].value[cIdx];
-    
     if (subset == 0) {
-      // This represents an empty set
-      info << " }\n";
+      info << "None";
     } else {
       unsigned iter = 0;
       for (auto const &v : uniqOrd_[vIdx - nCont_ - nOrd_]) {
         if (subset & (1 << (iter++)))
-          info << v << ", ";
+          info << v << " ";
       }
-      info << "\b\b}, ";
     }
   }
-  
   return info.str();
 }
 
-} // namespace ITR
+std::string Data::cutDir(size_t vIdx, size_t m) const {
+  std::string str; 
+  if (vIdx < nCont_ + nOrd_) {
+    str = (m ? " < " : " >= ");
+  } else {
+    str = (m ? " in " : " not in ");
+  }
+
+  return str;
+}
