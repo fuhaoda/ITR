@@ -1,1 +1,1 @@
-loadModule("ITR::ITR", TRUE)
+loadModule("ITR", TRUE)
