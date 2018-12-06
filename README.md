@@ -8,7 +8,7 @@ ITR is a library implementing the framework described in the paper
 
 The library is implemented in C++ and exported as a module to R using Rcpp.
 
-### As a C++ Library
+### C++
 The library can be built as a static library using `cmake` version 3.12 or
 later. The library has been tested with `gcc` version 8.1.0 and `clang` version
 9.1.0. 
@@ -30,7 +30,7 @@ to `/path/to/ITR-install/include/itr` and `libitr.a` to
 prefixing `CC=/path/to/c_compiler CXX=/path/to/cpp_compiler` to the `cmake`
 configuration line.
 
-### As an R module
+### R 
 Assume the source code has been unpacked to `/path/to/ITR`, the package can be
 installed by issuing
 ```
