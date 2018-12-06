@@ -1,0 +1,128 @@
+\chapter{Usage}
+
+\section{In a C++ program} 
+
+The package comes with a demonstration program in the {\tt demo} directory
+showing how to use the {\tt ITR} library.
+
+To use the library, one needs to include the header file {\tt ITR.h}. Inside
+{\tt main()}, an {\tt ITR} instance is created by passing three arguments to
+its constructor. The first argument is a {\tt std::string} object specifying the
+path to the input csv file. The second argument is an unsigned integer specifying the search depth. The third argument is an unsigned integer specifying the number of threads used in the search. 
+
+For the csv input file, the first line must be a header. The first column is the
+subject identifier, followed by continuous variables (labeled as {\tt cont*}), ordinal
+variables (labeled as {\tt ord*}), nominal variables (labeled as {\tt nom*}),
+actions (labeled as {\tt A*}), responses (labeled as {\tt Y*}), and condition
+probablity $P(A = 1 | X)$. The ITR library is case insensitive to these labels.
+
+For the search depth, the valid values are 1, 2, and 3.   
+
+The constructor of `ITR` will throw an exception if the input file does not
+exist or the search depth is invalid. 
+
+After the instance is created, one performs the search by invoking the {\tt run}
+method. Once the search completes, one can query the top {\tt n} results using
+the following methods
+
+\begin{enumerate}
+\item {\tt score}: Get the score of the top $n$ searches.
+\item {\tt var}: Get the index of the variables associated with the top scores.
+\item {\tt cut}: Get the cut information of a given top score.
+\item {\tt dir}: Get the direction of the cut associated with a given top score.
+\end{enumerate}
+
+Generally, one needs to {\tt -I/path/to/ITR-install/include/itr} and
+{\tt -L/path/to/ITR-install/lib -litr} to the compile command.  For the example,
+it can be built and executed as follows
+\begin{verbatim}
+> cd /path/to/ITR-build/demo
+> make demo
+> ./demo
+\end{verbatim}
+
+There are a few options to the {\tt demo} program, which can be found by
+\begin{verbatim}
+> ./demo --help
+Usage: ./demo [OPTIONS]
+--data=STRING Path to input file, default is sample100.csv
+--thread=NUM  Number of threads to use, default is 1
+--best=NUM    Number of top results to display, default is 5
+\end{verbatim} 
+
+A sample output of the {\tt demo} program looks like
+\begin{verbatim}
+> ./demo --thread=8
+Loading input data ...
+Creating search engine with depth 3
+Searching 689048 choices ...
+Completed in 6.264286e-03 seconds using 8 threads
+Score = 6.884978e+01, X1 < 49.8351 (percentile 50), X2 >= 49.6823 (percentile 20), X7 not in 0 2 
+Score = 6.787278e+01, X1 < 58.8109 (percentile 60), X6 not in 2 3 , X7 not in 2 3 
+Score = 6.744488e+01, X1 < 49.8351 (percentile 50), X7 not in 0 2 , X8 not in 2 
+Score = 6.742991e+01, X1 < 42.1108 (percentile 40), X5 < 3 (4 out of 5), X6 not in 2 3 
+Score = 6.740870e+01, X1 < 49.8351 (percentile 50), X6 not in 0 2 , X8 not in 2 
+\end{verbatim} 
+
+
+\section{In R}
+
+First load the library
+\begin{verbatim} 
+> library('ITR')
+\end{verbatim}
+
+Create an ITR instance by pasing the path to the input data file, the depth of the search, and the number of threads to run the search to the constructor
+\begin{verbatim}
+> itr <- new(ITR,'sample100.csv', 3, 8)
+Loading input data ...
+Creating search engine with depth 3
+\end{verbatim}
+
+Run the search
+\begin{verbatim}
+> itr$run()
+Searching 689048 choices ...
+Completed in 1.370409e-02 seconds using 8 threads
+\end{verbatim}
+
+Get the scores of the best 5 searches
+\begin{verbatim}
+> itr$score(5)
+[1] 68.84978 67.87278 67.44488 67.42991 67.40870
+\end{verbatim}
+
+Get the variables associated with the best 5 searches
+\begin{verbatim}
+> itr$var(5)
+     [,1] [,2] [,3]
+[1,]    1    2    7
+[2,]    1    6    7
+[3,]    1    7    8
+[4,]    1    5    6
+[5,]    1    6    8
+\end{verbatim} 
+Get the cut information of a particular search, say, the second best one,
+\begin{verbatim}
+> itr$cut(2)
+[[1]]
+[1] "58.8109 (percentile 60)"
+
+[[2]]
+[1] "2 3 "
+
+[[3]]
+[1] "2 3 "
+\end{verbatim}
+Get the direction of the cut associated with a particular search, say, the second best one
+\begin{verbatim}
+> itr$dir(2)
+[[1]]
+[1] " < "
+
+[[2]]
+[1] " not in "
+
+[[3]]
+[1] " not in "
+\end{verbatim}
