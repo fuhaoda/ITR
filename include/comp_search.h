@@ -1,9 +1,10 @@
 #ifndef __COMP_SEARCH_H__
 #define __COMP_SEARCH_H__
 
-#include <vector>
-#include "Data.h"
-#include "Types.h"
+#include <cstdint>
+#include <set> 
+#include "data.h"
+#include "types.h"
 
 //
 // Comprehensive search
@@ -17,10 +18,10 @@ public:
   void run();
 
   // Report the best scores.
-  rVector score(size_t nTop);
+  rVector score(size_t ntop);
 
   // Report the variables associated with the best scores.
-  uMaitrx var(size_t nTop);
+  uMaitrx var(size_t ntop);
 
   // Report the cut value associated with the i-th best score. 
   sVector cut(size_t i);
@@ -29,10 +30,57 @@ public:
   sVector dir(size_t i); 
 
 private:
-  const Data *data_; 
   unsigned depth_;
   unsigned nthreads_;
   size_t total_choices_{0};
+
+  // Use 4 bits to store each action value. Type uint32_t is used such that 8
+  // actions can be packed/unpacked at one time. 
+  std::vector<std::uint32_t> act_;
+
+  // Scaled response values.
+  std::vector<double> resp_;
+
+  // Summation of the responses where the corresponding action values are 0.
+  double T0_; 
+  
+  struct Cvar {
+    // Values of the cut for this variable.
+    std::vector<int> value;
+
+    // Masks of the components that belong to each cut.
+    std::vector<std::vector<std::uint32_t>> mask;
+  };
+
+  // Cut and mask information for each variable.
+  std::vector<Cvar> cvar_;
+
+  // Decile values of each continuous variable.
+  std::vector<std::vector<double>> decile_;
+
+  // Unique values of each ordinal variable. 
+  std::vector<std::set<int>> uniq_ord_;
+
+  // Unique values of each nominal variable.
+  std::vector<std::set<int>> uniq_nom_; 
+
+  // Compress the raw action values.
+  void pack_actions(const std::vector<int> &act);
+
+  // Compute the scaled responses.
+  void scale_response(const std::vector<double> &resp,
+                      const std::vector<double> &prob); 
+  
+  // Set up the cut masks for continuous variable. 
+  void set_cont_masks(const Data *data);
+
+  // Set up the cut masks for ordinal variable. 
+  void set_ord_masks(const Data *data);
+
+  // Set up the cut masks for nominal variable. 
+  void set_nom_masks(const Data *data);  
+
+  
 
   struct Meta {
     // Choices of variables used in the search.
