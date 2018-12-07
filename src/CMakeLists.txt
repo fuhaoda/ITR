@@ -1,3 +1,4 @@
-include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(${PROJECT_SOURCE_DIR}/include
+  ${PROJECT_SOURCE_DIR}/src/include)
 add_library(itr STATIC ITR.cpp Data.cpp SearchEngine.cpp Covariate.cpp)
 install(TARGETS itr DESTINATION lib)
