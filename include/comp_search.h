@@ -80,8 +80,6 @@ private:
   // Set up the cut masks for nominal variable. 
   void set_nom_masks(const Data *data);  
 
-  
-
   struct Meta {
     // Choices of variables used in the search.
     size_t vidx[3];

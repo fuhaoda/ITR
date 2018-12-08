@@ -2,15 +2,10 @@
 //#include <iostream>
 //#include <iterator>
 #include <algorithm>
-//#include <cstring>
-//#include <cstdint>
-//#include <bitset>
 #include <numeric>
 #include <cassert> 
 #include <sys/stat.h>
 #include "data.h"
-//#include "Data.h"
-//#include "Covariate.h"
 
 Data::Data(const std::string &input) {
   struct stat buffer{};
@@ -116,59 +111,6 @@ void Data::load_raw_data(std::ifstream &infile) {
 
     ++nsample_;
   }
-}
-
-std::vector<double> Data::decile(size_t i) {
-  assert(i < ncont_); 
-
-  std::vector<double> retval(10);
-  std::vector<double> &cont = cont_[i]; 
-  const double scaling_factor = 10.0 / nsample_;
-
-  // Sort the continuous variable in ascending order 
-  std::vector<size_t> sorted(nsample_);
-  std::iota(sorted.begin(), sorted.end(), 0);
-  std::sort(sorted.begin(), sorted.end(),
-            [&cont](size_t i1, size_t i2) {
-              return cont[i1] < cont[i2];
-            });
-
-  for (size_t i = 0; i < 9; ++i) {
-    double val = (i + 1) * nsample_ / 10.0 + 0.5;
-
-    // Get the integral and fractional parts
-    auto k = static_cast<size_t>(val);
-    double f = val - k;
-
-    // Get the values
-    double xk = cont[sorted[k - 1]];
-    double xk1 = cont[sorted[k]];
-
-    retval[i] = (1 - f) * xk + f * xk1;
-  }
-
-  // Store the maximum value
-  decile[9] = cont[sorted[nsample_ - 1]]; 
-  
-  return retval; 
-}
-
-std::set<int> Data::uniq_ord(size_t i) {
-  assert(i < nord_); 
-
-  std::set<int> uniq;
-  for (auto v : ord_[i])
-    uniq.insert(v);
-  return uniq; 
-}
-
-std::set<int> Data::uniq_nom(size_t i) {
-  assert(i < nnom_); 
-
-  std::set<int> uniq;
-  for (auto v : nom_[i])
-    uniq.insert(v);
-  return uniq; 
 }
 
 
@@ -509,6 +451,9 @@ std::set<int> Data::uniq_nom(size_t i) {
 //     }
 //   }
 // }
+
+
+// TODO: the next two need to be relocated into comp_search.cpp
 
 // std::string Data::cutVal(size_t vIdx, size_t cIdx) const {
 //   std::stringstream info;
