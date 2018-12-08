@@ -33,6 +33,7 @@ private:
   unsigned depth_;
   unsigned nthreads_;
   size_t total_choices_{0};
+  size_t nsample_; 
 
   // Use 4 bits to store each action value. Type uint32_t is used such that 8
   // actions can be packed/unpacked at one time. 
@@ -123,7 +124,10 @@ private:
                           size_t curr);
 
   // Worker function of the search
-  void worker(size_t tid);   
+  void worker(size_t tid);
+
+  // Helper function for various report functions
+  void report_helper(size_t &ntop); 
 }; 
 
 #endif 

@@ -11,6 +11,8 @@ CompSearch::CompSearch(const Data *data, unsigned depth,
 
   nthreads_ = std::min(nthreads, std::thread::hardware_concurrency());
 
+  nsample_ = data->nsample(); 
+  
   // Pack raw action values.
   pack_actions(data->act());
 
@@ -40,9 +42,40 @@ CompSearch::CompSearch(const Data *data, unsigned depth,
   index_.resize(scores_.size()); 
 }
 
+void CompSearch::run() {
+  std::vector<std::thread> threads(nthreads_);
+
+  for (size_t i = 0; i < nthreads_; ++i)
+    threads[i] = std::thread(&CompSearch::worker, this, i);
+
+  for (auto &th : threads)
+    th.join(); 
+}
+
+void CompSearch::report_helper(size_t &ntop) {
+  // Cap ntop
+  ntop = std::min(ntop, scores_.size() - 1);
+
+  if (ntop > ntop_) {
+    // We need to sort again
+    ntop_ = ntop;
+    std::iota(index_.begin(), index_.end(), 0);
+    std::partial_sort(index_.begin(), index_.begin() + ntop_, index_.end(),
+                      [&](size_t i1, size_t i2) {
+                        return scores_[i1] > scores_[i2];
+                      });
+  }
+}
+
+rVector CompSearch::score(size_t ntop) {
+
+
+}
+
+
 void CompSearch::pack_actions(const std::vector<int> &act) {
-  size_t q = act.size() >> 3;
-  size_t r = act.size() % 8;
+  size_t q = nsample_ >> 3;
+  size_t r = nsample_ % 8;
   act_.resize((r > 0 ? q + 1: q)); 
 
   // Process the first q batches of actions
@@ -67,8 +100,8 @@ void CompSearch::pack_actions(const std::vector<int> &act) {
 
 void CompSearch::scale_response(const std::vector<double> &resp,
                                 const std::vector<double> &prob) {
-  size_t q = resp.size() >> 3;
-  int r = static_cast<int>(resp.size() % 8);
+  size_t q = nsample_ >> 3;
+  int r = static_cast<int>(nsample_ % 8);
 
   T0_ = 0.0;
   // Process the first q batches
@@ -98,12 +131,11 @@ void CompSearch::scale_response(const std::vector<double> &resp,
 }
 
 void CompSearch::set_cont_masks(const Data *data) {
-  size_t nsample = data->nsample();
-  std::vector<double> mapped(nsample);
-  std::vector<size_t> sorted(nsample);
-  double scaling_factor = 10.0 / nsample;
-  size_t q = nsample >> 3;
-  size_t r = nsample % 8;
+  std::vector<double> mapped(nsample_);
+  std::vector<size_t> sorted(nsample_);
+  double scaling_factor = 10.0 / nsample_;
+  size_t q = nsample_ >> 3;
+  size_t r = nsample_ % 8;
   size_t len = q + (r > 0); 
 
   for (size_t i = 0; i < data->ncont(); ++i) {
@@ -118,7 +150,7 @@ void CompSearch::set_cont_masks(const Data *data) {
     // Compute the deciles of the raw values
     decile_[i].resize(10);
     for (size_t j = 0; j < 9; ++j) {
-      double val = (j + 1) * nsample / 10.0 + 0.5;
+      double val = (j + 1) * nsample_ / 10.0 + 0.5;
 
       // Get the integral and fractional parts
       auto k = static_cast<size_t>(val);
@@ -131,10 +163,10 @@ void CompSearch::set_cont_masks(const Data *data) {
       decile_[i][j] = (1 - f) * xk + f * xk1;
     }
 
-    decile_[i][9] = raw[sorted[nsample - 1]];
+    decile_[i][9] = raw[sorted[nsample_ - 1]];
 
     // Convert the raw values into deciles
-    for (size_t j = 0; j < nsample; ++j) {
+    for (size_t j = 0; j < nsample_; ++j) {
       // The kth component of the variable is in the jth sorted position
       auto k = sorted[j];
 
@@ -180,10 +212,9 @@ void CompSearch::set_cont_masks(const Data *data) {
 }
   
 void CompSearch::set_ord_masks(const Data *data) {
-  size_t nsample = data->nsample();
-  std::vector<int> mapped(nsample);
-  size_t q = nsample >> 3;
-  size_t r = nsample % 8;
+  std::vector<int> mapped(nsample_);
+  size_t q = nsample_ >> 3;
+  size_t r = nsample_ % 8;
   size_t len = q + (r > 0); 
   
   for (size_t i = 0; i < data->nord(); ++i) {
@@ -201,7 +232,7 @@ void CompSearch::set_ord_masks(const Data *data) {
       reverse_map.insert(std::make_pair(v, rank++));
 
     // Map the raw values into their ranks within the unique set.
-    for (size_t j = 0; j < nsample; ++j)
+    for (size_t j = 0; j < nsample_; ++j)
       mapped[j] = reverse_map[raw[j]];
 
     // Compute the overall variable index
@@ -235,10 +266,9 @@ void CompSearch::set_ord_masks(const Data *data) {
 }
 
 void CompSearch::set_nom_masks(const Data *data) {
-  size_t nsample = data->nsample();
-  std::vector<int> mapped(nsample);
-  size_t q = nsample >> 3;
-  size_t r = nsample % 8;
+  std::vector<int> mapped(nsample_);
+  size_t q = nsample_ >> 3;
+  size_t r = nsample_ % 8;
   size_t len = q + (r > 0);
 
   for (size_t i = 0; i < data->nnom(); ++i) {
@@ -258,7 +288,7 @@ void CompSearch::set_nom_masks(const Data *data) {
     // Map the raw values into bitmasks. If the order of value v in the unique
     // set is r, then the bitmask is 1 << r. Here, we assume that there are at
     // most 31 different unique values. 
-    for (size_t j = 0; j < nsample; ++j)
+    for (size_t j = 0; j < nsample_; ++j)
       mapped[j] = (1 << reverse_map[raw[j]]);
 
     // Compute the overall variable index
@@ -304,13 +334,142 @@ void CompSearch::set_nom_masks(const Data *data) {
   }
 }
 
+void CompSearch::combination(std::vector<size_t> curr,
+                             std::vector<size_t> option, char mode) {
+  // Get the number of variables to choose
+  size_t nchoices = depth_ - curr.size();
+  if (nchoices == 0) {
+    // Need to choose no more
+    if (mode == 'c') {
+      count_choices(curr);
+    } else {
+      set_choices(curr);
+    }
+  } else if (option.size() < nchoices) {
+    // Does not have enough to choose from
+    return;
+  } else {
+    auto curr1 = curr;
+    curr1.insert(curr1.end(), option.begin(), option.begin() + 1);
+    option.erase(option.begin());
 
-
-std::set<int> Data::uniq_nom(size_t i) {
-  assert(i < nnom_); 
-
-  std::set<int> uniq;
-  for (auto v : nom_[i])
-    uniq.insert(v);
-  return uniq; 
+    // Choose `nchoices` from options
+    combination(curr, option, mode);
+    // Choose `nchoices - 1` from options
+    combination(curr1, option, mode);
+  }
 }
+
+void CompSearch::count_choices(const std::vector<size_t> &choices) {
+  size_t nchoices = 1;
+  for (const auto &vidx : choices)
+    nchoices *= cvar_[vidx].value.size(); 
+  total_choices_ += nchoices;
+}
+
+void CompSearch::set_choices(const std::vector<size_t> &choices) {
+  std::vector<size_t> cidx;
+  std::vector<size_t> cbound;
+  for (const auto &vidx : choices) {
+    cidx.push_back(0);
+    cbound.push_back(cvar_[vidx].value.size());
+  }
+
+  set_choices_helper(choices, cidx, cbound, 0);
+}
+
+void CompSearch::set_choices_helper(const std::vector<size_t> &vidx,
+                                    std::vector<size_t> cidx,
+                                    std::vector<size_t> &cbound,
+                                    size_t curr) {
+  if (cidx[curr] == cbound[curr]) {
+    return;
+  } else {
+    if (curr < depth_ - 1) {
+      set_choices_helper(vidx, cidx, cbound, curr + 1);
+    } else {
+      for (size_t d = 0; d < depth_; ++d) {
+        choices_[iter_].vidx[d] = vidx[d];
+        choices_[iter_].cidx[d] = cidx[d];
+      }
+      iter_++;
+    }
+
+    cidx[curr]++;
+    set_choices_helper(vidx, cidx, cbound, curr);
+  }
+}
+
+void CompSearch::worker(size_t tid) {
+  // Compute the range of searches the worker needs to perform.
+  size_t first = 0, last = 0;
+  auto nchoice = choices_.size();
+  auto per_worker = nchoice / nthreads_;
+  auto remainder = nchoice % nthreads_;
+
+  if (tid < remainder) {
+    first = (per_worker + 1) * tid;
+    last = first + per_worker + 1;
+  } else {
+    first = per_worker * tid + remainder;
+    last = first + per_worker;
+  }
+
+  size_t stride = 1u << depth_;
+
+  for (size_t i = first; i < last; ++i) {
+    std::vector<double> v(1u << (depth_ + 1), 0.0);
+    double *ans = scores_.data() + i * stride;
+
+    std::vector<const std::uint32_t *> m(depth_);
+    for (size_t d = 0; d < depth_; ++d) {
+      auto vidx = choices_[i].vidx[d];
+      auto cidx = choices_[i].cidx[d];
+      m[d] = cvar_[vidx].mask[cidx].data();
+    }
+
+    size_t q = nsample_ >> 3;
+    size_t r = nsample_ % 8;
+
+    // We sort data into different buckets based on the values of response and
+    // cut masks. For example, there are 16 buckets if depth is 3:
+    // (0000)_2 (0001)_2 (0010)_2 (0011)_2
+    // (0100)_2 (0101)_2 (0110)_2 (0111)_2
+    // (1000)_2 (1001)_2 (1010)_2 (1011)_2
+    // (1100)_2 (1101)_2 (1110)_2 (1111)_2 
+    for (size_t j = 0; j < q; ++j) {
+      size_t idx = act_[j];
+      for (size_t d = 0; d < depth_; ++d)
+        idx += m[d][j] << (depth_ - d);
+
+      size_t j8 = j << 3;
+      for (int k = 7; k >= 0; --k) {
+        // Read the bottom 4 bits
+        v[idx & 0xF] += resp_[j8 + k];
+        // Drop the bottom 4 bits
+        idx >>= 4;
+      }
+    }
+
+    if (r) {
+      size_t idx = act_[q];
+      for (size_t d = 0; d < depth_; ++d)
+        idx += m[d][q] << (depth_ - d);
+
+      // Drop the bottom bits that are all zero.
+      idx >>= (32 - 4 * r);
+
+      size_t j8 = q << 3;
+      for (int k = static_cast<int>(r) - 1; k >= 0; --k) {
+        v[idx & 0xF] += resp_[j8 + k];
+        idx >>= 4;
+      }
+    }
+
+    for (size_t j = 0; j < stride; ++j)
+      ans[j] = v[2 * j + 1] - v[2 * j]; 
+  }
+}
+
+
+  
