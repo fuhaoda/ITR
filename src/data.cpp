@@ -97,11 +97,11 @@ void Data::load_raw_data(std::ifstream &infile) {
     
     // Read response
     getline(ss, field, ',');
-    resp_.push_back(std::stoi(field));
+    resp_.push_back(std::stod(field));
 
     // Read probability
     getline(ss, field, ',');
-    auto prAX = std::stoi(field);
+    auto prAX = std::stod(field);
     if (prAX < 0.0 || prAX > 1.0) {
       std::cerr << "The propensity score outside [0.0, 1.0]\n";
       exit(-1);

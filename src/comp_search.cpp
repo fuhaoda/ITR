@@ -17,6 +17,11 @@ CompSearch::CompSearch(const Data *data, unsigned depth,
   ncont_ = data->ncont();
   nord_ = data->nord();
   nnom_ = data->nnom(); 
+
+  decile_.resize(ncont_);
+  uniq_ord_.resize(nord_);
+  uniq_nom_.resize(nnom_);
+  cvar_.resize(ncont_ + nord_ + nnom_); 
   
   // Pack raw action values.
   pack_actions(data->act());
@@ -73,9 +78,10 @@ void CompSearch::pack_actions(const std::vector<int> &act) {
 }
 
 void CompSearch::scale_response(const std::vector<double> &resp,
-                                const std::vector<double> &prob) {
+                                const std::vector<double> &prob) {  
   size_t q = nsample_ >> 3;
   int r = static_cast<int>(nsample_ % 8);
+  resp_.resize(nsample_);
 
   T0_ = 0.0;
   // Process the first q batches
@@ -547,7 +553,7 @@ std::string CompSearch::cut_val(size_t vidx, size_t cidx) const {
     } else {
       unsigned iter = 0;
       for (auto const &v : uniq_ord_[vidx - ncont_ - nord_]) {
-        if (subset && (1 << (iter++)))
+        if (subset & (1 << (iter++)))
           info << v << " ";
       }
     }
