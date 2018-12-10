@@ -6,13 +6,12 @@
 #include <map>
 #include "comp_search.h"
 
-CompSearch::CompSearch(const Data *data, unsigned depth,
-                       unsigned nthreads) : depth_{depth} {
+CompSearch::CompSearch(unsigned depth, unsigned nthreads) : depth_{depth} {
   if (depth != 1 && depth != 2 && depth != 3)
     throw "Invalid search depth!";
 
   nthreads_ = std::min(nthreads, std::thread::hardware_concurrency());
-
+     
   nsample_ = data->nsample();
   ncont_ = data->ncont();
   nord_ = data->nord();
@@ -30,9 +29,9 @@ CompSearch::CompSearch(const Data *data, unsigned depth,
   scale_response(data->resp(), data->prob());
 
   // Convert variables into cut masks.
-  set_cont_masks(data);
-  set_ord_masks(data);
-  set_nom_masks(data); 
+  set_cont_masks(data.get());
+  set_ord_masks(data.get());
+  set_nom_masks(data.get()); 
     
   // Compute the total number of searches to examine
   std::vector<size_t> vidx(data->nvar()); 

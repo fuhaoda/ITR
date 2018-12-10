@@ -3,17 +3,15 @@
 
 #include <cstdint>
 #include <cstring>
-#include <set> 
+#include <set>
 #include "data.h"
 #include "types.h"
 
-//
-// Comprehensive search
-//
+// Comprehensive search when the action choice is binary. 
 class CompSearch {
 public:
   // Constructor.
-  CompSearch(const Data *data, unsigned depth, unsigned nthreads);
+  CompSearch(unsigned depth, unsigned nthreads); 
 
   // Run the comprehensive search.
   void run();

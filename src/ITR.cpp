@@ -1,4 +1,3 @@
-#include "ITR.h"
 
 // This file should contain only Rcpp exports 
 
@@ -65,19 +64,31 @@
 
 // #endif 
 
+#include "ITR.h"
+
+void load_data(const std::string &input) {
+
+  if (data == nullptr) {
+    data = std::make_unique<Data>(input);
+  } else {
+    data = std::unique_ptr<Data>(new Data{input});
+  }
+}
+
+
 #ifdef USE_RCPP
 
-RCPP_MODULE(ITR) {
-  using namespace Rcpp;
+// RCPP_MODULE(ITR) {
+//   using namespace Rcpp;
 
-  class_<Data>("Data")
-    .constructor<const std::string &>()
-    ;
+//   class_<Data>("Data")
+//     .constructor<std::string>()
+//     ;
 
 
-  class_<Foo>("Foo")
-    .constructor<Data *>()
-    ;
-}
+//   class_<Foo>("Foo")
+//     .constructor<SEXP>()
+//     ;
+// }
 
 #endif 

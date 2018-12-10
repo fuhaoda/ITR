@@ -47,9 +47,12 @@ int main(int argc, char **argv) {
   }
   
   try {
-    Data input(ifile); 
+    load_data(ifile);
+
+    CompSearch cs(3, nthreads); 
+    //Data input(ifile); 
     
-    CompSearch cs(&input, 3, nthreads); 
+    //CompSearch cs(&input, 3, nthreads); 
 
     // Run the search
     cs.run();
