@@ -1,3 +1,5 @@
+#include "ITR.h"
+
 // This file should contain only Rcpp exports 
 
 // #include <iostream>
@@ -62,3 +64,20 @@
 // }
 
 // #endif 
+
+#ifdef USE_RCPP
+
+RCPP_MODULE(ITR) {
+  using namespace Rcpp;
+
+  class_<Data>("Data")
+    .constructor<const std::string &>()
+    ;
+
+
+  class_<Foo>("Foo")
+    .constructor<Data *>()
+    ;
+}
+
+#endif 

@@ -6,6 +6,7 @@
 #include <fstream>
 #include <vector>
 #include <cassert> 
+#include <iostream>
 
 // The code here assumes that the first column is ID, followed by continuous
 // variables, ordinal categorical variables, nominal variables, actions,
@@ -104,5 +105,9 @@ private:
   void load_raw_data(std::ifstream &infile);   
 }; 
 
-
+class Foo {
+  Foo(Data *d) {
+    std::cout << d->ncont() << "\n";
+  }
+}; 
 #endif 
