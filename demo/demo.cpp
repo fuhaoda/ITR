@@ -12,8 +12,8 @@ void printUsage(char *program) {
 
 int main(int argc, char **argv) {
   std::string ifile{"sample100.csv"};
-  unsigned nThreads = 1;
-  unsigned nTop = 5;
+  unsigned nthreads = 1;
+  unsigned ntop = 5;
   
   // Parse command line
   static struct option long_options[] =
@@ -34,10 +34,10 @@ int main(int argc, char **argv) {
       ifile = optarg;
       break;
     case 't':
-      nThreads = atoi(optarg);
+      nthreads = atoi(optarg);
       break;
     case 'b':
-      nTop = atoi(optarg);
+      ntop = atoi(optarg);
       break;
     case 'h':
     case '?':
@@ -47,25 +47,24 @@ int main(int argc, char **argv) {
   }
   
   try {
-    ITR instance{ifile, 3, nThreads};
+    Data input(ifile); 
     
-    // Run the search
-    instance.run();
-    
-    // Retrive the top n treatment recommendations.
-    auto scores = instance.score(5);
-    auto var = instance.var(5);
+    CompSearch cs(&input, 3, nthreads); 
 
-    for (size_t i = 0; i < nTop; ++i) {
-      auto cut = instance.cut(i);
-      auto dir = instance.dir(i);
-      std::cout << "Score = " << scores[i] << ", "
-                << "X" << var(i, 0)
-                << dir[0] << cut[0] << ", "
-                << "X" << var(i, 1)
-                << dir[1] << cut[1] << ", "
-                << "X" << var(i, 2)
-                << dir[2] << cut[2] << "\n";
+    // Run the search
+    cs.run();
+
+    // Get the top 5 treatment recommendations.
+    auto scores = cs.score(5);
+    auto var = cs.var(5);
+
+    for (size_t i = 0; i < ntop; ++i) {
+      auto cut = cs.cut(i);
+      auto dir = cs.dir(i);
+      std::cout << "Score = " << scores[i]
+                << ", X" << var(i, 0) << dir[0] << cut[0]
+                << ", X" << var(i, 1) << dir[1] << cut[1]
+                << ", X" << var(i, 2) << dir[2] << cut[2] << "\n";
     }
   } catch (const char *msg) {
     std::cout << msg << "\n";

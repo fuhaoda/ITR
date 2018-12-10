@@ -1,7 +1,9 @@
 #include <algorithm>
 #include <thread> 
 #include <numeric>
-#include <bitset> 
+#include <bitset>
+#include <sstream>
+#include <map>
 #include "comp_search.h"
 
 CompSearch::CompSearch(const Data *data, unsigned depth,
@@ -11,13 +13,16 @@ CompSearch::CompSearch(const Data *data, unsigned depth,
 
   nthreads_ = std::min(nthreads, std::thread::hardware_concurrency());
 
-  nsample_ = data->nsample(); 
+  nsample_ = data->nsample();
+  ncont_ = data->ncont();
+  nord_ = data->nord();
+  nnom_ = data->nnom(); 
   
   // Pack raw action values.
   pack_actions(data->act());
 
   // Scale responses.
-  scale_response(data->resp());
+  scale_response(data->resp(), data->prob());
 
   // Convert variables into cut masks.
   set_cont_masks(data);
@@ -25,7 +30,7 @@ CompSearch::CompSearch(const Data *data, unsigned depth,
   set_nom_masks(data); 
     
   // Compute the total number of searches to examine
-  std::vector<size_t> vidx(data_->nvar()); // TODO: change nVar name
+  std::vector<size_t> vidx(data->nvar()); 
   std::iota(vidx.begin(), vidx.end(), 0);
   combination(std::vector<size_t>{}, vidx, 'c');
 
@@ -35,43 +40,12 @@ CompSearch::CompSearch(const Data *data, unsigned depth,
 
   // Set all the search choices
   iter_ = 0;
-  combination(std::vector<size_t>{}, vidx, s'); 
+  combination(std::vector<size_t>{}, vidx, 's'); 
 
   // None of the search scores have been sorted
   ntop_ = 0;
   index_.resize(scores_.size()); 
 }
-
-void CompSearch::run() {
-  std::vector<std::thread> threads(nthreads_);
-
-  for (size_t i = 0; i < nthreads_; ++i)
-    threads[i] = std::thread(&CompSearch::worker, this, i);
-
-  for (auto &th : threads)
-    th.join(); 
-}
-
-void CompSearch::report_helper(size_t &ntop) {
-  // Cap ntop
-  ntop = std::min(ntop, scores_.size() - 1);
-
-  if (ntop > ntop_) {
-    // We need to sort again
-    ntop_ = ntop;
-    std::iota(index_.begin(), index_.end(), 0);
-    std::partial_sort(index_.begin(), index_.begin() + ntop_, index_.end(),
-                      [&](size_t i1, size_t i2) {
-                        return scores_[i1] > scores_[i2];
-                      });
-  }
-}
-
-rVector CompSearch::score(size_t ntop) {
-
-
-}
-
 
 void CompSearch::pack_actions(const std::vector<int> &act) {
   size_t q = nsample_ >> 3;
@@ -93,7 +67,7 @@ void CompSearch::pack_actions(const std::vector<int> &act) {
     q <<= 3; 
     for (size_t i = 0; i < r; ++i)
       val |= act[q + i] << (28 - 4 * i);
-    q >> = 3;
+    q >>= 3;
     act_[q] = val;
   }
 }
@@ -111,7 +85,7 @@ void CompSearch::scale_response(const std::vector<double> &resp,
     for (int k = 7; k >= 0; --k) {
       resp_[i8 + k] = resp[i8 + k] / prob[i8 + k];
       T0_ += resp_[i8 + k] * (1 - (mask & 0xF));
-      mask >> = 4;
+      mask >>= 4;
     }
   }
 
@@ -400,6 +374,16 @@ void CompSearch::set_choices_helper(const std::vector<size_t> &vidx,
   }
 }
 
+void CompSearch::run() {
+  std::vector<std::thread> threads(nthreads_);
+
+  for (size_t i = 0; i < nthreads_; ++i)
+    threads[i] = std::thread(&CompSearch::worker, this, i);
+
+  for (auto &th : threads)
+    th.join(); 
+}
+
 void CompSearch::worker(size_t tid) {
   // Compute the range of searches the worker needs to perform.
   size_t first = 0, last = 0;
@@ -471,5 +455,115 @@ void CompSearch::worker(size_t tid) {
   }
 }
 
+void CompSearch::report_helper(size_t &ntop) {
+  // Cap ntop
+  ntop = std::min(ntop, scores_.size() - 1);
 
+  if (ntop > ntop_) {
+    // We need to sort again
+    ntop_ = ntop;
+    std::iota(index_.begin(), index_.end(), 0);
+    std::partial_sort(index_.begin(), index_.begin() + ntop_, index_.end(),
+                      [&](size_t i1, size_t i2) {
+                        return scores_[i1] > scores_[i2];
+                      });
+  }
+}
+
+rVector CompSearch::score(size_t ntop) {
+  report_helper(ntop); 
+
+  rVector retval(ntop);
+  double scale = 1.0 / nsample_;
+  for (size_t i = 0; i < ntop; ++i) {
+    size_t sid = index_[i]; // search id
+    retval[i] = (T0_ + scores_[sid]) * scale;
+  }
+
+  return retval; 
+}
+
+uMatrix CompSearch::var(size_t ntop) {
+  report_helper(ntop);
+
+  uMatrix retval(ntop, depth_);
+  for (size_t i = 0; i < ntop; ++i) {
+    size_t sid = index_[i];     // search id
+    size_t cid = sid >> depth_; // choice id 
+    for (size_t d = 0; d < depth_; ++d)
+      retval(i, d) = choices_[cid].vidx[d];
+  }
+
+  return retval; 
+}
+
+sVector CompSearch::cut(size_t i) {
+  report_helper(i);
+  sVector out(depth_); 
+
+#ifdef USE_RCPP
+  // i is passed through R where array index starts from 1. Need to decrement
+  // before accessing the value.
+  i--;
+#endif
+
+  size_t sid = index_[i];     // search id
+  size_t cid = sid >> depth_; // choice id
+  for (size_t d = 0; d < depth_; ++d)
+    out[d] = cut_val(choices_[cid].vidx[d], choices_[cid].cidx[d]);
   
+  return out;       
+}
+
+sVector CompSearch::dir(size_t i) {
+  report_helper(i);
+  sVector out(depth_);
+
+#ifdef USE_RCPP
+  i--;
+#endif
+
+  size_t sid = index_[i];     // search id
+  size_t cid = sid >> depth_; // choice id
+  size_t mask = sid % (1 << depth_);
+
+  for (size_t d = 0; d < depth_; ++d)
+    out[d] = cut_dir(choices_[cid].vidx[d],
+                     mask & (1u << (depth_ - 1u - d)));
+  return out; 
+}
+
+std::string CompSearch::cut_val(size_t vidx, size_t cidx) const {
+  std::stringstream info; 
+  if (vidx < ncont_) {
+    info << decile_[vidx][cidx] << " (percentile " << (cidx + 1) * 10 << ")";
+  } else if (vidx < ncont_ + nord_) {
+    info << cvar_[vidx].value[cidx] << " (" << cidx + 1 << " out of "
+         << uniq_nom_[vidx - ncont_].size() << ")";
+  } else {
+    auto subset = cvar_[vidx].value[cidx];
+    if (subset == 0) {
+      info << "None";
+    } else {
+      unsigned iter = 0;
+      for (auto const &v : uniq_ord_[vidx - ncont_ - nord_]) {
+        if (subset && (1 << (iter++)))
+          info << v << " ";
+      }
+    }
+  }
+
+  return info.str(); 
+}
+
+
+std::string CompSearch::cut_dir(size_t vidx, size_t m) const {
+  std::string str;
+  if (vidx < ncont_ + nord_) {
+    str = (m ? " < " : " >= ");
+  } else {
+    str = (m ? " in " : " not in ");
+  }
+
+  return str; 
+}

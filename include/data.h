@@ -2,6 +2,7 @@
 #define __DATA_H__
 
 #include <string>
+#include <cstring>
 #include <fstream>
 #include <vector>
 #include <cassert> 
@@ -84,7 +85,7 @@ private:
   std::vector<std::vector<int>> nom_; 
   
   // Action vector
-  std::vector<std::int> act_; 
+  std::vector<int> act_; 
 
   // Reponse vector
   std::vector<double> resp_;

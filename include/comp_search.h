@@ -2,6 +2,7 @@
 #define __COMP_SEARCH_H__
 
 #include <cstdint>
+#include <cstring>
 #include <set> 
 #include "data.h"
 #include "types.h"
@@ -21,7 +22,7 @@ public:
   rVector score(size_t ntop);
 
   // Report the variables associated with the best scores.
-  uMaitrx var(size_t ntop);
+  uMatrix var(size_t ntop);
 
   // Report the cut value associated with the i-th best score. 
   sVector cut(size_t i);
@@ -33,7 +34,10 @@ private:
   unsigned depth_;
   unsigned nthreads_;
   size_t total_choices_{0};
-  size_t nsample_; 
+  size_t nsample_;
+  size_t ncont_;
+  size_t nord_;
+  size_t nnom_; 
 
   // Use 4 bits to store each action value. Type uint32_t is used such that 8
   // actions can be packed/unpacked at one time. 
@@ -56,6 +60,12 @@ private:
   // Cut and mask information for each variable.
   std::vector<Cvar> cvar_;
 
+  // Return the value of cut `cidx` for variable `vidx`
+  std::string cut_val(size_t vidx, size_t cidx) const;
+
+  // Return the string representation for the cut direction of variable vidx
+  std::string cut_dir(size_t vidx, size_t m) const; 
+  
   // Decile values of each continuous variable.
   std::vector<std::vector<double>> decile_;
 
@@ -127,7 +137,7 @@ private:
   void worker(size_t tid);
 
   // Helper function for various report functions
-  void report_helper(size_t &ntop); 
+  void report_helper(size_t &ntop);  
 }; 
 
 #endif 
