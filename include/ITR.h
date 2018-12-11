@@ -4,9 +4,8 @@
 #include <string> 
 #include "comp_search.h"
 
+// Register the data set before it can be analyzed by available methods. 
 size_t register_data(const std::string &input); 
-
-//void load_data(const std::string &input); 
 
 #endif 
 

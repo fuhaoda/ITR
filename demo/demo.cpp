@@ -47,16 +47,17 @@ int main(int argc, char **argv) {
   }
   
   try {
+    // Register the data set
     auto input = register_data(ifile); 
-    //load_data(ifile);
 
-    CompSearch cs(input, 3, nthreads); 
-    //Data input(ifile); 
+    // Create a comprehensive search instance
+    CompSearch cs(3, nthreads);
+
+    // Preprocess the raw data
+    cs.preprocess(input); 
     
-    //CompSearch cs(&input, 3, nthreads); 
-
-    // Run the search
-    cs.run();
+    // Run the analysis
+    cs.run(); 
 
     // Get the top 5 treatment recommendations.
     auto scores = cs.score(5);

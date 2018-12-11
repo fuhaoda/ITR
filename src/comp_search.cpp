@@ -6,14 +6,15 @@
 #include <map>
 #include "comp_search.h"
 
-CompSearch::CompSearch(unsigned input, unsigned depth,
-                       unsigned nthreads) : depth_{depth} {
+CompSearch::CompSearch(unsigned depth, unsigned nthreads) : depth_{depth} {
   if (depth != 1 && depth != 2 && depth != 3)
     throw "Invalid search depth!";
 
   nthreads_ = std::min(nthreads, std::thread::hardware_concurrency());
+}
 
-  Data *data = rdata[input].get(); 
+void CompSearch::preprocess(unsigned i) {
+  Data *data = rdata[i].get(); 
   
   nsample_ = data->nsample();
   ncont_ = data->ncont();
