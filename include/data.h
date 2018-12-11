@@ -105,6 +105,7 @@ private:
   void load_raw_data(std::ifstream &infile);   
 }; 
 
-extern std::unique_ptr<Data> data; 
+// Vector of raw data
+extern std::vector<std::unique_ptr<Data>> rdata; 
 
 #endif 

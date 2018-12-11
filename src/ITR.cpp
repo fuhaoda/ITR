@@ -64,8 +64,32 @@
 
 // #endif 
 
+#include <unordered_map> 
 #include "ITR.h"
 
+size_t register_data(const std::string &input) {
+  static std::unordered_map<std::string, size_t> data_log;
+  size_t retval; 
+
+  auto it = data_log.find(input);
+  if (it == data_log.end()) {
+    // This data is registered for the first time
+
+    // Load the data
+    rdata.push_back(std::make_unique<Data>(input));
+
+    // Update the data log
+    retval = rdata.size() - 1;
+
+    data_log.insert(std::make_pair(input, retval));
+  } else {
+    retval = it->second;
+  }
+
+  return retval;
+}
+
+/*
 void load_data(const std::string &input) {
 
   if (data == nullptr) {
@@ -75,20 +99,24 @@ void load_data(const std::string &input) {
   }
 }
 
-
+*/
 #ifdef USE_RCPP
 
-// RCPP_MODULE(ITR) {
-//   using namespace Rcpp;
+RCPP_MODULE(ITR) {
+  using namespace Rcpp;
 
-//   class_<Data>("Data")
-//     .constructor<std::string>()
-//     ;
+  class_<CompSearch>("CompSearch")
+    .constructor<unsigned, unsigned, unsigned>()
+    .method("run", &CompSearch::run)
+    .method("score", &CompSearch::score)
+    .method("var", &CompSearch::var)
+    .method("cut", &CompSearch::cut)
+    .method("dir", &CompSearch::dir)
+    ;
 
-
-//   class_<Foo>("Foo")
-//     .constructor<SEXP>()
-//     ;
-// }
+  function("register_data", &register_data); 
+  //function("load_data", &load_data); 
+  
+}
 
 #endif 

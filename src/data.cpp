@@ -6,7 +6,8 @@
 #include <sys/stat.h>
 #include "data.h"
 
-std::unique_ptr<Data> data; 
+//std::unique_ptr<Data> data;
+std::vector<std::unique_ptr<Data>> rdata; 
 
 Data::Data(const std::string &input) {
   struct stat buffer{};

@@ -1,2 +1,4 @@
-export(ITR)
+export(register_data)
+#export(load_data)
+export(CompSearch)
 useDynLib(ITR)

@@ -47,9 +47,10 @@ int main(int argc, char **argv) {
   }
   
   try {
-    load_data(ifile);
+    auto input = register_data(ifile); 
+    //load_data(ifile);
 
-    CompSearch cs(3, nthreads); 
+    CompSearch cs(input, 3, nthreads); 
     //Data input(ifile); 
     
     //CompSearch cs(&input, 3, nthreads); 

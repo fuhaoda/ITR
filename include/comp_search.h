@@ -11,7 +11,7 @@
 class CompSearch {
 public:
   // Constructor.
-  CompSearch(unsigned depth, unsigned nthreads); 
+  CompSearch(unsigned input, unsigned depth, unsigned nthreads); 
 
   // Run the comprehensive search.
   void run();
