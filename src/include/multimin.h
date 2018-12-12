@@ -2,7 +2,7 @@
 #define __MULTIMIN_H__
 
 #include <memory>
-#include <cstring> 
+#include <algorithm>
 #include "fdf.h"
 
 // An abstract base class for minimization of a multi-dimensional function 
@@ -12,14 +12,13 @@ public:
   //
   // func: Function to be minimized
   // iter: Max number of iterations allowed
-  // x: starting location 
-  MultiMin(FDF &func, size_t iter, const double *x)
-    : func_{func}, n_{func.dim()}, maxIter_{iter}, iter_{0}, f_{0}
+  // x: starting location
+  MultiMin(FDF *func, size_t iter, const std::vector<double> &x)
+    : func_{func}, n_{func->dim()}, maxIter_{iter}, iter_{0}, f_{0}
   {
-    x_ = std::unique_ptr<double []>{new double[n_]};
-    g_ = std::unique_ptr<double []>{new double[n_]{0.0}};
-
-    memcpy(x_.get(), x, sizeof(double) * n_); 
+    x_.assign(x.begin(), x.end());
+    g_.resize(n_);
+    std::fill(g_.begin(), g_.end(), 0.0); 
   }
 
   
@@ -39,8 +38,8 @@ public:
   }
   
   // Copy the location of the minimizer into the provided buffer
-  void x(double *out) const {
-    memcpy(out, x_.get(), sizeof(double) * n_);
+  void x(std::vector<double> &out) const {
+    out.assign(x_.begin(), x_.end()); 
   }
   
   // Return the value of the function at the minimizer
@@ -48,7 +47,7 @@ public:
   
 protected:  
   // Function being minimized
-  FDF &func_;
+  FDF *func_;
 
   // Dimension of the function
   size_t n_; 
@@ -60,18 +59,14 @@ protected:
   size_t iter_; 
   
   // Location of the best minimizer found so far
-  std::unique_ptr<double []> x_; 
+  std::vector<double> x_; 
 
   // Value of the function evaluated at x_
   double f_;
 
   // Value of the gradient of the function evaluated at x_
-  std::unique_ptr<double []> g_; 
+  std::vector<double> g_; 
 }; 
-
-
-
-
 
 #endif 
 

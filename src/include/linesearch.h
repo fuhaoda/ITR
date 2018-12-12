@@ -1,7 +1,6 @@
 #ifndef __LINE_SEARCH_H__
 #define __LINE_SEARCH_H__
 
-#include <memory>
 #include "fdf.h"
 
 // Line search class implementing the algorithm described in the reference:
@@ -13,7 +12,7 @@ class MoreThuente {
 public: 
   // Constructor
   // 
-  // func: Reference to a real-valued differentiable function
+  // func: Pointer to a real-valued differentiable function
   // maxFuncEval: Maximum number of function evaluation allowed
   // mu: Sufficient decrease parameter
   // eta: Directional derivative parameter
@@ -21,12 +20,15 @@ public:
   // alphaMax: Upper bound on the step size
   // xtol: Nonnegative value. The line search terminates if the relative width
   // of the interval of uncertainty is at most xtol
-  MoreThuente(FDF &func, double xtol = 1e-16, size_t maxFuncEval = 20,
+  MoreThuente(FDF *func, double xtol = 1e-16, size_t maxFuncEval = 20,
               double mu = 1e-4, double eta = 0.9,
               double alphaMin = 1e-20, double alphaMax = 1e20) : 
-    func_{func}, xtol_{xtol}, n_{func.dim()}, nFuncEval_{0},
+    func_{func}, xtol_{xtol}, n_{func->dim()}, nFuncEval_{0},
     maxFuncEval_{maxFuncEval}, mu_{mu}, eta_{eta}, alphaMin_{alphaMin},
-    alphaMax_{alphaMax}, work_{std::unique_ptr<double []>{new double[n_]}} { }
+    alphaMax_{alphaMax}
+  {
+    work_.resize(n_);
+  }
 
   // Perform the line search along the direction x + alpha * p.
   //
@@ -50,12 +52,18 @@ public:
   // -4: The step is too large.
   // -5: The step is too small.
   // -6: Too many function evaluations
-  // -7: Relative width of the interval of uncertainty is at most xtol. 
-  int search(double *x, double &f, double *g, const double *p, double &alpha);
+  // -7: Relative width of the interval of uncertainty is at most xtol.
+  int search(std::vector<double> &x, double &f, std::vector<double> &g,
+             const double *p, double &alpha); 
+
+  int search(std::vector<double> &x, double &f, std::vector<double> &g,
+             const std::vector<double> &p, double alpha) {
+    return search(x, f, g, p.data(), alpha);
+  }
   
 private:
   // A real-valued differentiable function
-  FDF &func_;
+  FDF *func_;
 
   // A nonnegative input variable. The line search terminates if the relative
   // width of the interval of uncertainty is at most xtol. 
@@ -83,7 +91,7 @@ private:
   double alphaMax_;  
 
   // A scratch space used by the search routine
-  std::unique_ptr<double []> work_; 
+  std::vector<double> work_; 
   
   // Compute a safeguard step for a linesearch and to update an interval of
   // uncertainty for a minimizer of the function.
@@ -124,7 +132,6 @@ private:
   double quadMinimizer2(double u, double du,
                         double v, double dv) const;
 };   
-
 
 #endif 
 
