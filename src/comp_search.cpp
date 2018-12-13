@@ -13,7 +13,7 @@ CompSearch::CompSearch(unsigned depth, unsigned nthreads) : depth_{depth} {
   nthreads_ = std::min(nthreads, std::thread::hardware_concurrency());
 }
 
-void CompSearch::preprocess(unsigned i) {
+void CompSearch::preprocess(size_t i) {
   Data *data = rdata[i].get(); 
   
   nsample_ = data->nsample();

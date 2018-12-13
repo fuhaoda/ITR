@@ -14,7 +14,7 @@ public:
   CompSearch(unsigned depth, unsigned nthreads); 
 
   // Preprocess raw data set i.
-  void preprocess(unsigned i); 
+  void preprocess(size_t i); 
    
   // Run the comprehensive search.
   void run();
