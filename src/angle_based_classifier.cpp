@@ -47,7 +47,9 @@ void AngleBasedClassifier::preprocess(size_t i) {
 
   // Set up the vertices of the simplex
   set_simplex_vertices(); 
-  
+
+  // Compute kernel matrix
+  compute_kernel_matrix(); 
 }
 
 void AngleBasedClassifier::parse_actions(const std::vector<int> &act) {
@@ -85,7 +87,34 @@ AngleBasedClassifier::scale_response(const std::vector<double> &resp,
 }
 
 void AngleBasedClassifier::set_simplex_vertices() {
+  size_t sz = k_ * (k_ - 1);
+  w_.resize(sz);
+  wt_.resize(sz); 
+  
+  double c1 = 1.0 / sqrt(k_ - 1);
+  double c2 = - (1 + sqrt(k_)) * pow(c1, 3);
+  double c3 = sqrt(k_) * c1;
 
+  std::fill(w_.begin(), w_.begin() + k_, c1);
+  std::fill(w_.begin() + k_, w_.end(), c2);
+  for (size_t j = 1; j < k_; ++j) {
+    // Update jth row, (j-1)th column
+    w_[j * k_ - 1] += c3;
+  }
+
+  std::fill(wt_.begin(), wt_.end(), c2);
+  for (size_t j = 0; j < k_ - 1; ++j) {
+    wt_[j * k_] = c1;
+    wt_[j * k_ + j + 1] += c3;
+  }
+}
+
+void AngleBasedClassifier::compute_kernel_matrix() {
+  for (size_t i = 0; i < nsample_; ++i) {
+    for (size_t j = 0; j < nsample_; ++j) {
+      kernel_[i * nsample_ + j] = (this->*func_)(i, j);
+    }
+  }
 }
 
 double AngleBasedClassifier::rbf(size_t i, size_t j) const {
@@ -126,7 +155,7 @@ double AngleBasedClassifier::dloss_p(double x) const {
   static double c2 = 1 - c_;
   double retval = -1;
   if (x >= thres_) {
-    retval /= pow(c1 * x + c2, 2);
+    retval = pow(c1 * x + c2, -2);
   }
   return retval;
 }
@@ -136,7 +165,7 @@ double AngleBasedClassifier::dloss_m(double x) const {
   static double c2 = 1 - c_; 
   double retval = 1;
   if (-x >= thres_) {
-    retval /= pow(c2 - c1 * x, 2);
+    retval = pow(c2 - c1 * x, -2);
   }
   return retval; 
 }

@@ -92,6 +92,8 @@ private:
 
   // Transpose of w. This memory layout is used when evaluating the gradient.
   std::vector<double> wt_;
+
+  void compute_kernel_matrix(); 
   
   // Full kernel matrix, stored in row major.
   std::vector<double> kernel_; 
