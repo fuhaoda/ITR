@@ -155,12 +155,25 @@ void AngleBasedClassifier::compute_kernel_matrix(const Data *data) {
   
   kmat_.resize(nsample_ * nsample_);
   auto d = temp.data();   
+
+  // Compute the kernel matrix in parallel. 
+  std::vector<std::thread> threads(nthreads_);
+  for (size_t i = 0; i < nthreads_; ++i)
+    threads[i] = std::thread(&AngleBasedClassifier::kernel_worker, this, d, i);
+
+  for (auto &th: threads)
+    th.join(); 
+
+  // for (size_t i = 0; i < nsample_; ++i) {
+  //   for (size_t j = 0; j < nsample_; ++j) {
+  //     kmat_[i * nsample_ + j] = (this->*func_)(d, i, j);
+  //   }
+  // }
+}
+
+void AngleBasedClassifier::kernel_worker(const double *d, size_t tid) {
   
-  for (size_t i = 0; i < nsample_; ++i) {
-    for (size_t j = 0; j < nsample_; ++j) {
-      kmat_[i * nsample_ + j] = (this->*func_)(d, i, j);
-    }
-  }
+
 }
 
 double AngleBasedClassifier::rbf(const double *d, size_t i, size_t j) const {
