@@ -21,6 +21,8 @@ public:
     std::fill(g_.begin(), g_.end(), 0.0); 
   }
 
+  // Virtual destructor 
+  virtual ~MultiMin() { } 
   
   // Routine to move the minimizer to a better location. It returns true if more
   // iteration is needed. 

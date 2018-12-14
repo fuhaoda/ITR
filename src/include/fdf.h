@@ -6,6 +6,8 @@
 // Class of real-valued differentiable function.
 class FDF {
 public:
+  virtual ~FDF() = default; 
+
   // Evaluate the function at location x.
   virtual void eval(const std::vector<double> &x, double &f) const = 0;
 
