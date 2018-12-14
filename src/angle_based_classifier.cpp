@@ -8,12 +8,11 @@
 #include "angle_based_classifier.h"
 #include "vlbfgs.h"
 
-AngleBasedClassifier::AngleBasedClassifier(double c, double lambda, 
-                                           std::string kernel,
-                                           unsigned nthreads) {
+ABCFunc::ABCFunc(double c, double lambda, std::string kernel,
+                 unsigned nthreads) {
   c_ = c;
-  thres_ = c / (1 + c); 
-  lambda_ = lambda;
+  thres_ = c / (1 + c);
+  lambda_ = lambda; 
   nthreads_ = std::min(nthreads, std::thread::hardware_concurrency());
 
   // Transform input kernel string to all CAPs.
@@ -22,12 +21,12 @@ AngleBasedClassifier::AngleBasedClassifier(double c, double lambda,
   std::istringstream ss(kernel);
   std::vector<std::string> params{std::istream_iterator<std::string>(ss), {}};
   if (params[0] == "RBF") {
-    func_ = &AngleBasedClassifier::rbf;
+    func_ = &ABCFunc::rbf;
     // Cast the sigma value
     sigma_ =  std::stod(params[1]);
     sigma_ = -1.0 / 2.0 / sigma_ / sigma_; 
   } else if (params[0] == "POLY") {
-    func_ = &AngleBasedClassifier::poly; 
+    func_ = &ABCFunc::poly; 
     shift_ = std::stod(params[1]);
     deg_ = std::stod(params[2]);    
   } else {
@@ -35,9 +34,7 @@ AngleBasedClassifier::AngleBasedClassifier(double c, double lambda,
   }      
 }
 
-void AngleBasedClassifier::preprocess(size_t i) {
-  Data *data = rdata[i].get();
-
+void ABCFunc::bind(const Data *data) {
   nsample_ = data->nsample();
   ncont_ = data->ncont();
   nord_ = data->nord();
@@ -56,13 +53,9 @@ void AngleBasedClassifier::preprocess(size_t i) {
 
   // Compute kernel matrix
   compute_kernel_matrix(data);
-
-  // Resize beta_ and initialize it with 0. 
-  beta_.resize((1 + nsample_) * (k_ - 1));
-  std::fill(beta_.begin(), beta_.end(), 0.0); 
 }
 
-void AngleBasedClassifier::parse_actions(const std::vector<int> &act) {
+void ABCFunc::parse_actions(const std::vector<int> &act) {
   // Collect the unique values of the raw values.
   for (auto v : act)
     uniq_act_.insert(v);
@@ -82,9 +75,8 @@ void AngleBasedClassifier::parse_actions(const std::vector<int> &act) {
     act_[i] = reverse_map[act[i]]; 
 }
 
-void
-AngleBasedClassifier::scale_response(const std::vector<double> &resp,
-                                     const std::vector<double> &prob) {
+void ABCFunc::scale_response(const std::vector<double> &resp,
+                             const std::vector<double> &prob) {
   resp_.resize(nsample_);
   for (size_t i = 0; i < nsample_; ++i) {
     resp_[i] = fabs(resp[i]) / prob[i];
@@ -96,7 +88,7 @@ AngleBasedClassifier::scale_response(const std::vector<double> &resp,
   }
 }
 
-void AngleBasedClassifier::set_simplex_vertices() {
+void ABCFunc::set_simplex_vertices() {
   size_t sz = k_ * (k_ - 1);
   w_.resize(sz);
   wt_.resize(sz); 
@@ -119,7 +111,7 @@ void AngleBasedClassifier::set_simplex_vertices() {
   }
 }
 
-void AngleBasedClassifier::compute_kernel_matrix(const Data *data) {
+void ABCFunc::compute_kernel_matrix(const Data *data) {
   // The raw data are read column wise. Here, we need to store it row wise to
   // perform the inner product more efficiently.
   std::vector<double> temp(nsample_ * nvar_); 
@@ -160,13 +152,13 @@ void AngleBasedClassifier::compute_kernel_matrix(const Data *data) {
   // Compute the kernel matrix in parallel. 
   std::vector<std::thread> threads(nthreads_);
   for (size_t i = 0; i < nthreads_; ++i)
-    threads[i] = std::thread(&AngleBasedClassifier::kernel_worker, this, d, i);
+    threads[i] = std::thread(&ABCFunc::kernel_worker, this, d, i);
 
   for (auto &th: threads)
     th.join(); 
 }
 
-void AngleBasedClassifier::kernel_worker(const double *d, size_t tid) {
+void ABCFunc::kernel_worker(const double *d, size_t tid) {
   size_t first = 0, last = 0;
   size_t total = nsample_ * (nsample_ + 1) / 2;
   size_t per_worker = total / nthreads_;
@@ -198,7 +190,7 @@ void AngleBasedClassifier::kernel_worker(const double *d, size_t tid) {
   }
 }
 
-double AngleBasedClassifier::rbf(const double *d, size_t i, size_t j) const {
+double ABCFunc::rbf(const double *d, size_t i, size_t j) const {
   const double *di = d + i * nvar_;
   const double *dj = d + j * nvar_; 
   double r = 0.0;
@@ -212,7 +204,7 @@ double AngleBasedClassifier::rbf(const double *d, size_t i, size_t j) const {
   return exp(r * sigma_); 
 } 
 
-double AngleBasedClassifier::poly(const double *d, size_t i, size_t j) const {
+double ABCFunc::poly(const double *d, size_t i, size_t j) const {
   const double *di = d + i * nvar_;
   const double *dj = d + j * nvar_;
   double r = std::inner_product(di, di + ncomp_, dj, 0.0) +
@@ -221,12 +213,7 @@ double AngleBasedClassifier::poly(const double *d, size_t i, size_t j) const {
   return pow(r + shift_, deg_); 
 }
 
-void AngleBasedClassifier::run() {
-  VLBFGS vlbfgs{this, 100, beta_, 5, 1e-5, 1e-16}; 
-
-}
-
-double AngleBasedClassifier::loss_p(double x) const {
+double ABCFunc::loss_p(double x) const {
   static double c1 = (1 + c_) * (1 + c_);
   static double c2 = 1 - c_ * c_;
   double retval = 1 - x;
@@ -236,7 +223,7 @@ double AngleBasedClassifier::loss_p(double x) const {
   return retval; 
 }
 
-double AngleBasedClassifier::loss_m(double x) const {
+double ABCFunc::loss_m(double x) const {
   static double c1 = (1 + c_) * (1 + c_);
   static double c2 = 1 - c_ * c_;
   double retval = 1 + x;
@@ -246,7 +233,7 @@ double AngleBasedClassifier::loss_m(double x) const {
   return retval;
 }
 
-double AngleBasedClassifier::dloss_p(double x) const {
+double ABCFunc::dloss_p(double x) const {
   static double c1 = 1 + c_;
   static double c2 = 1 - c_;
   double retval = -1;
@@ -256,7 +243,7 @@ double AngleBasedClassifier::dloss_p(double x) const {
   return retval;
 }
 
-double AngleBasedClassifier::dloss_m(double x) const {
+double ABCFunc::dloss_m(double x) const {
   static double c1 = 1 + c_;
   static double c2 = 1 - c_; 
   double retval = 1;
@@ -266,23 +253,52 @@ double AngleBasedClassifier::dloss_m(double x) const {
   return retval; 
 }
 
-void AngleBasedClassifier::eval(const std::vector<double> &x,
-                                double &f) const {
+void ABCFunc::eval(const std::vector<double> &x, double &f) const {
 
 }
 
-void AngleBasedClassifier::eval(const std::vector<double> &x,
-                                std::vector<double> &g) const {
+void ABCFunc::eval(const std::vector<double> &x,
+                   std::vector<double> &g) const {
 
 }
 
 
-void AngleBasedClassifier::eval(const std::vector<double> &x, double &f,
-                                std::vector<double> &g) const {
+void ABCFunc::eval(const std::vector<double> &x, double &f,
+                   std::vector<double> &g) const {
+}
+
+
+AngleBasedClassifier::AngleBasedClassifier(double c, double lambda,
+                                           const std::string &kernel,
+                                           size_t maxIter, size_t m,
+                                           double eps, unsigned nthreads) {
+  // Create the objective function.
+  func_ = std::make_unique<ABCFunc>(c, lambda, kernel, nthreads);
+
+  // Resize beta and initilize to zero.
+  beta_.resize(func_->dim());
+  std::fill(beta_.begin(), beta_.end(), 0.0); 
+  
+  // Create the VL-BFGS solver object.
+  vlbfgs_ = std::make_unique<VLBFGS>(func_.get(), maxIter, beta_, m,
+                                     eps, 1e-16); 
+}
+
+void AngleBasedClassifier::preprocess(size_t i) {
+  // Bind the data to the objective function.
+  func_->bind(rdata[i].get()); 
+}
+
+void AngleBasedClassifier::run() {
+  // Solve the nonlinear optimization problem.
+  vlbfgs_->solve();
+
+  // Copy the results.
+  vlbfgs_->x(beta_); 
 }
 
 rVector AngleBasedClassifier::beta() const {
   rVector retval(beta_.begin(), beta_.end());
-  return retval; 
+  return retval;
 }
-                                
+
