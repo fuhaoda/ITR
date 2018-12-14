@@ -6,6 +6,7 @@
 #include <numeric>
 #include <cmath>
 #include "angle_based_classifier.h"
+#include "vlbfgs.h"
 
 AngleBasedClassifier::AngleBasedClassifier(double c, double lambda, 
                                            std::string kernel,
@@ -163,17 +164,38 @@ void AngleBasedClassifier::compute_kernel_matrix(const Data *data) {
 
   for (auto &th: threads)
     th.join(); 
-
-  // for (size_t i = 0; i < nsample_; ++i) {
-  //   for (size_t j = 0; j < nsample_; ++j) {
-  //     kmat_[i * nsample_ + j] = (this->*func_)(d, i, j);
-  //   }
-  // }
 }
 
 void AngleBasedClassifier::kernel_worker(const double *d, size_t tid) {
-  
+  size_t first = 0, last = 0;
+  size_t total = nsample_ * (nsample_ + 1) / 2;
+  size_t per_worker = total / nthreads_;
+  size_t remainder = total % nthreads_;
 
+  if (tid < remainder) {
+    first = (per_worker + 1) * tid;
+    last = first + per_worker + 1;
+  } else {
+    first = per_worker * tid + remainder;
+    last = first + per_worker;
+  }
+
+  size_t count = 0;
+  for (size_t i = 0; i < nsample_; ++i) {
+    for (size_t j = i; j < nsample_; ++j) {
+      if (count < first) {
+        count++;
+      } else if (count < last) {
+        double v = (this->*func_)(d, i, j);
+        kmat_[i * nsample_ + j] = v;
+        kmat_[j * nsample_ + i] = v; 
+        count++; 
+      } else {        
+        i = nsample_; // break the outer loop
+        break;        // break the inner loop
+      }
+    }
+  }
 }
 
 double AngleBasedClassifier::rbf(const double *d, size_t i, size_t j) const {
@@ -200,6 +222,7 @@ double AngleBasedClassifier::poly(const double *d, size_t i, size_t j) const {
 }
 
 void AngleBasedClassifier::run() {
+  VLBFGS vlbfgs{this, 100, beta_, 5, 1e-5, 1e-16}; 
 
 }
 
