@@ -16,9 +16,6 @@ public:
   // Constructor
   AngleBasedClassifier(double c, double lambda, const std::string &kernel,
                       size_t maxIter, size_t m, double eps, unsigned nthreads);
-
-  //LBFGS lbfgs{&func, 100, x, 5, 1e-5, 1e-16}; 
-
   
   // Preprocess raw data set i.
   void preprocess(size_t i);
@@ -128,12 +125,6 @@ private:
   // Scaled response values.
   std::vector<double> resp_;
 
-  // Indices of the samples whose responses are positive.
-  std::vector<size_t> pidx_;
-
-  // Indices of the samples whose responses are negative.
-  std::vector<size_t> nidx_;
-
   // Set the vertices of the simplex.
   void set_simplex_vertices();
 
@@ -148,12 +139,21 @@ private:
   // Compute kernel function. 
   void compute_kernel_matrix(const Data *data);
 
-  // Worker function to compute the entries of the kernel matrix
+  // Worker function to compute the entries of the kernel matrix.
   void kernel_worker(const double *d, size_t tid); 
   
   // Full kernel matrix, stored in row major.
-  std::vector<double> kmat_; 
+  std::vector<double> kmat_;
 
+  // Compute the input to each loss function.
+  std::vector<double> compute_loss(const std::vector<double> &x) const; 
+  
+  // Worker function to compute the input to each loss function. 
+  void loss_worker(size_t tid, const double *x, double *u) const; 
+
+  // Compute the gradient of the function.
+  void grad_worker(size_t tid, const double *du, double *g) const;
+    
   // Loss function when the response is positive.
   double loss_p(double x) const;
 
