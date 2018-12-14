@@ -45,19 +45,21 @@ private:
   double shift_;      // Parameter for the polynomial (linear) kernel.
   double deg_;        // Parameter for the polynomial (linear) kernel. 
   size_t k_;          // Number of categories.
-  size_t nsample_;    
-  size_t ncont_;
-  size_t nord_;
-  size_t nnom_;
-
+  size_t nsample_;    // Number of samples.
+  size_t ncont_;      // Number of continuous variables.
+  size_t nord_;       // Number of ordinal variables.
+  size_t nnom_;       // Number of nominal variables.
+  size_t nvar_;       // Total number of variables
+  size_t ncomp_;      // Number of variables that are comparable. 
+  
   // RBF kernel function 
-  double rbf(size_t i, size_t j) const; 
+  double rbf(const double *d, size_t i, size_t j) const; 
 
   // Polynomial kernel function 
-  double poly(size_t i, size_t j) const ; 
+  double poly(const double *d, size_t i, size_t j) const ; 
 
   // Pointer to the kernel function being used.
-  double (AngleBasedClassifier::*func_)(size_t i, size_t j) const; 
+  double (AngleBasedClassifier::*func_)(const double *, size_t, size_t) const; 
 
   // Parse raw action values.
   void parse_actions(const std::vector<int> &act);
@@ -93,10 +95,10 @@ private:
   // Transpose of w. This memory layout is used when evaluating the gradient.
   std::vector<double> wt_;
 
-  void compute_kernel_matrix(); 
+  void compute_kernel_matrix(const Data *data); 
   
   // Full kernel matrix, stored in row major.
-  std::vector<double> kernel_; 
+  std::vector<double> kmat_; 
 
   // Solution to the nonlinear optimization problem
   std::vector<double> beta_;

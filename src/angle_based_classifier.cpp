@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
+#include <numeric>
 #include <cmath>
 #include "angle_based_classifier.h"
 
@@ -21,7 +22,9 @@ AngleBasedClassifier::AngleBasedClassifier(double c, double lambda,
   std::vector<std::string> params{std::istream_iterator<std::string>(ss), {}};
   if (params[0] == "RBF") {
     func_ = &AngleBasedClassifier::rbf;
-    sigma_ = std::stod(params[1]);
+    // Cast the sigma value
+    sigma_ =  std::stod(params[1]);
+    sigma_ = -1.0 / 2.0 / sigma_ / sigma_; 
   } else if (params[0] == "POLY") {
     func_ = &AngleBasedClassifier::poly; 
     shift_ = std::stod(params[1]);
@@ -38,6 +41,8 @@ void AngleBasedClassifier::preprocess(size_t i) {
   ncont_ = data->ncont();
   nord_ = data->nord();
   nnom_ = data->nnom();
+  nvar_ = ncont_ + nord_ + nnom_;
+  ncomp_ = ncont_ + nord_; 
 
   // Count number of categories and map raw values into their ranks.
   parse_actions(data->act());
@@ -49,7 +54,11 @@ void AngleBasedClassifier::preprocess(size_t i) {
   set_simplex_vertices(); 
 
   // Compute kernel matrix
-  compute_kernel_matrix(); 
+  compute_kernel_matrix(data);
+
+  // Resize beta_ and initialize it with 0. 
+  beta_.resize((1 + nsample_) * (k_ - 1));
+  std::fill(beta_.begin(), beta_.end(), 0.0); 
 }
 
 void AngleBasedClassifier::parse_actions(const std::vector<int> &act) {
@@ -109,22 +118,73 @@ void AngleBasedClassifier::set_simplex_vertices() {
   }
 }
 
-void AngleBasedClassifier::compute_kernel_matrix() {
+void AngleBasedClassifier::compute_kernel_matrix(const Data *data) {
+  // The raw data are read column wise. Here, we need to store it row wise to
+  // perform the inner product more efficiently.
+  std::vector<double> temp(nsample_ * nvar_); 
+
+  for (size_t i = 0; i < ncont_; ++i) {
+    const std::vector<double> &cont = data->cont(i);
+    size_t iter = i;
+
+    // Note: Perform normalization if needed. 
+
+    for (size_t j = 0; j < nsample_; ++j) {
+      temp[iter] = cont[j];
+      iter += nvar_;
+    }
+  }
+
+  for (size_t i = 0; i < nord_; ++i) {
+    const std::vector<int> &ord = data->ord(i);
+    size_t iter = i + ncont_;
+    for (size_t j = 0; j < nsample_; ++j) {
+      temp[iter] = static_cast<double>(ord[j]);
+      iter += nvar_;
+    }
+  }
+
+  for (size_t i = 0; i < nnom_; ++i) {
+    const std::vector<int> &nom = data->nom(i);
+    size_t iter = i + ncont_ + nord_;
+    for (size_t j = 0; j < nsample_; ++j) {
+      temp[iter] = static_cast<double>(nom[j]);
+      iter += nvar_;
+    }
+  }
+  
+  kmat_.resize(nsample_ * nsample_);
+  auto d = temp.data();   
+  
   for (size_t i = 0; i < nsample_; ++i) {
     for (size_t j = 0; j < nsample_; ++j) {
-      kernel_[i * nsample_ + j] = (this->*func_)(i, j);
+      kmat_[i * nsample_ + j] = (this->*func_)(d, i, j);
     }
   }
 }
 
-double AngleBasedClassifier::rbf(size_t i, size_t j) const {
-  return 0.0; 
+double AngleBasedClassifier::rbf(const double *d, size_t i, size_t j) const {
+  const double *di = d + i * nvar_;
+  const double *dj = d + j * nvar_; 
+  double r = 0.0;
+  
+  for (size_t k = 0; k < ncomp_; ++k)
+    r += pow(di[k] - dj[k], 2);
+  
+  for (size_t k = ncomp_; k < nvar_; ++k)
+    r += (di[k] == dj[k]);
+  
+  return exp(r * sigma_); 
 } 
 
-double AngleBasedClassifier::poly(size_t i, size_t j) const {
-  return 0.0; 
+double AngleBasedClassifier::poly(const double *d, size_t i, size_t j) const {
+  const double *di = d + i * nvar_;
+  const double *dj = d + j * nvar_;
+  double r = std::inner_product(di, di + ncomp_, dj, 0.0) +
+    std::inner_product(di + ncomp_, di + nvar_, dj + ncomp_, 0.0, 
+                       std::plus<>(), std::equal_to<>());
+  return pow(r + shift_, deg_); 
 }
-
 
 void AngleBasedClassifier::run() {
 
