@@ -145,11 +145,12 @@ private:
   // Full kernel matrix, stored in row major.
   std::vector<double> kmat_;
 
-  // Compute the input to each loss function.
-  std::vector<double> compute_loss(const std::vector<double> &x) const; 
+  // Compute the value of each loss function and its derivative.
+  void compute_loss(const std::vector<double> &x,
+                    double *loss, double *dloss) const; 
   
-  // Worker function to compute the input to each loss function. 
-  void loss_worker(size_t tid, const double *x, double *u) const; 
+  // Worker function to compute the input to each loss function.
+  void loss_worker(size_t tid, const double *x, double *u, double *du) const;
 
   // Compute the gradient of the function.
   void grad_worker(size_t tid, const double *du, double *g) const;

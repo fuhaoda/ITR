@@ -90,6 +90,71 @@ void ABCFunc::bind(const Data *data) {
   compute_kernel_matrix(data);
 }
 
+void ABCFunc::eval(const std::vector<double> &x, double &f) const {
+  std::vector<double> loss(nsample_);
+  compute_loss(x, loss.data(), nullptr);
+
+  f = 0.0;
+  for (size_t i = 0; i < nsample_; ++i)
+    f += fabs(resp_[i]) * loss[i]; 
+}
+
+void ABCFunc::eval(const std::vector<double> &x, std::vector<double> &g) const {
+  std::vector<double> dloss(nsample_);
+  double *pd = dloss.data();
+  double *pg = g.data(); 
+
+  compute_loss(x, nullptr, pd);
+  std::vector<std::thread> threads(nthreads_);
+  for (size_t i = 0; i < nthreads_; ++i)
+    threads[i] = std::thread(&ABCFunc::grad_worker, this, i, pd, pg);
+
+  for (auto &th : threads)
+    th.join(); 
+}
+
+void ABCFunc::eval(const std::vector<double> &x, double &f,
+                   std::vector<double> &g) const {
+  std::vector<double> loss(nsample_), dloss(nsample_);
+  compute_loss(x, loss.data(), dloss.data());
+
+  f = 0.0;
+  for (size_t i = 0; i < nsample_; ++i)
+    f += fabs(resp_[i]) * loss[i];
+
+  double *pd = dloss.data();
+  double *pg = g.data();
+  std::vector<std::thread> threads(nthreads_);
+  for (size_t i = 0; i < nthreads_; ++i)
+    threads[i] = std::thread(&ABCFunc::grad_worker, this, i, pd, pg);
+
+  for (auto &th : threads)
+    th.join(); 
+}
+
+double ABCFunc::rbf(const double *d, size_t i, size_t j) const {
+  const double *di = d + i * nvar_;
+  const double *dj = d + j * nvar_; 
+  double r = 0.0;
+  
+  for (size_t k = 0; k < ncomp_; ++k)
+    r += pow(di[k] - dj[k], 2);
+  
+  for (size_t k = ncomp_; k < nvar_; ++k)
+    r += (di[k] == dj[k]);
+  
+  return exp(r * sigma_); 
+} 
+
+double ABCFunc::poly(const double *d, size_t i, size_t j) const {
+  const double *di = d + i * nvar_;
+  const double *dj = d + j * nvar_;
+  double r = std::inner_product(di, di + ncomp_, dj, 0.0) +
+    std::inner_product(di + ncomp_, di + nvar_, dj + ncomp_, 0.0, 
+                       std::plus<>(), std::equal_to<>());
+  return pow(r + shift_, deg_); 
+}
+
 void ABCFunc::parse_actions(const std::vector<int> &act) {
   // Collect the unique values of the raw values.
   for (auto v : act)
@@ -237,27 +302,103 @@ void ABCFunc::kernel_worker(const double *d, size_t tid) {
   }
 }
 
-double ABCFunc::rbf(const double *d, size_t i, size_t j) const {
-  const double *di = d + i * nvar_;
-  const double *dj = d + j * nvar_; 
-  double r = 0.0;
+void ABCFunc::compute_loss(const std::vector<double> &x,
+                           double *loss, double *dloss) const {
+  std::vector<std::thread> threads(nthreads_);
+  const double *px = x.data(); 
   
-  for (size_t k = 0; k < ncomp_; ++k)
-    r += pow(di[k] - dj[k], 2);
-  
-  for (size_t k = ncomp_; k < nvar_; ++k)
-    r += (di[k] == dj[k]);
-  
-  return exp(r * sigma_); 
-} 
+  for (size_t i = 0; i < nthreads_; ++i)
+    threads[i] = std::thread(&ABCFunc::loss_worker, this, i, px, loss, dloss); 
 
-double ABCFunc::poly(const double *d, size_t i, size_t j) const {
-  const double *di = d + i * nvar_;
-  const double *dj = d + j * nvar_;
-  double r = std::inner_product(di, di + ncomp_, dj, 0.0) +
-    std::inner_product(di + ncomp_, di + nvar_, dj + ncomp_, 0.0, 
-                       std::plus<>(), std::equal_to<>());
-  return pow(r + shift_, deg_); 
+  for (auto &th : threads)
+    th.join(); 
+}
+
+void ABCFunc::loss_worker(size_t tid, const double *x,
+                          double *loss, double *dloss) const {
+  size_t first = 0, last = 0;
+  size_t per_worker = nsample_ / nthreads_;
+  size_t remainder = nsample_ % nthreads_;
+
+  if (tid < remainder) {
+    first = (per_worker + 1) * tid;
+    last = first + per_worker + 1;
+  } else {
+    first = per_worker * tid + remainder;
+    last = first + per_worker;
+  }
+
+  std::vector<double> u(last - first, 0.0); 
+  
+  for (size_t i = first; i < last; ++i) {
+    // Get the vertex of the simplex corresponding to the category of sample i.
+    const double *w = &w_[act_[i] * (k_ - 1)];
+
+    // Get row i of the kernel matrix.
+    const double *row = &kmat_[i * nsample_];
+
+    // Compute the projection of sample i.
+    std::vector<double> proj(k_ - 1, 0.0);
+    for (size_t j = 0; j < k_ - 1; ++j) {
+      size_t j1 = j * (nsample_ + 1);
+      size_t j2 = j1 + (nsample_ + 1);
+      proj[j] = std::inner_product(&x[j1 + 1], &x[j2], row, x[j1]);
+    }
+
+    // Compute the inner product between the projection and simplex vertex.
+    u[i - first] = std::inner_product(w, w + k_ - 1, proj.begin(), 0.0);
+  }
+
+  // Compute the loss function if loss is not nullptr.
+  if (loss) {
+    for (size_t i = first; i < last; ++i) {
+      double v = u[i - first];
+      loss[i] = (resp_[i] > 0 ? loss_p(v) : loss_m(v));
+    }
+  }
+  
+  // Compute the derivative of the loss function if dloss is not nullptr.
+  if (dloss) {
+    for (size_t i = first; i < last; ++i) {
+      double v = u[i - first]; 
+      dloss[i] = (resp_[i] > 0 ? dloss_p(v) : dloss_m(v));
+    }
+  }
+}
+
+void ABCFunc::grad_worker(size_t tid, const double *du, double *g) const {
+  size_t first = 0, last = 0;
+  size_t total = (nsample_ + 1) * (k_ - 1);
+  size_t per_worker = total / nthreads_;
+  size_t remainder = nsample_ % nthreads_;
+
+  if (tid < remainder) {
+    first = (per_worker + 1) * tid;
+    last = first + per_worker + 1;
+  } else {
+    first = per_worker * tid + remainder;
+    last = first + per_worker;
+  }
+
+  for (size_t i = first; i < last; ++i) {
+    size_t q = i / (nsample_ + 1);
+    size_t p = i % (nsample_ + 1);
+    const double *wt = &w_[q * k_]; 
+   
+    if (p == 0) {
+      // Partial derivative for x_{0q}
+      g[i] = std::inner_product(wt, wt + k_, du, 0.0); 
+    } else {
+      // Partial derivative for x_{pq}
+      g[i] = 0.0; 
+      
+      // Get row p of the kernel matrix.
+      const double *row = &kmat_[p * nsample_];
+      
+      for (size_t j = 0; j < nsample_; ++j) 
+        g[i] += du[j] * row[j] * wt[j]; 
+    }
+  }
 }
 
 double ABCFunc::loss_p(double x) const {
@@ -300,133 +441,7 @@ double ABCFunc::dloss_m(double x) const {
   return retval; 
 }
 
-std::vector<double> ABCFunc::compute_loss(const std::vector<double> &x) const {
-  std::vector<double> u(nsample_);
-  std::vector<std::thread> threads(nthreads_);
 
-  const double *px = x.data();
-  double *pu = u.data(); 
-  
-  for (size_t i = 0; i < nthreads_; ++i)
-    threads[i] = std::thread(&ABCFunc::loss_worker, this, i, px, pu); 
 
-  for (auto &th : threads)
-    th.join();
 
-  return u; 
-}
-
-void ABCFunc::eval(const std::vector<double> &x, double &f) const {
-  std::vector<double> u = compute_loss(x);
-
-  f = 0.0;  
-  for (size_t i = 0; i < nsample_; ++i)
-    f += fabs(resp_[i]) * (resp_[i] > 0 ? loss_p(u[i]) : loss_m(u[i]));
-}
-
-void ABCFunc::eval(const std::vector<double> &x, std::vector<double> &g) const {
-  std::vector<double> u = compute_loss(x); 
-
-  std::vector<double> du(nsample_);  
-  for (size_t i = 0; i < nsample_; ++i)
-    du[i] = (resp_[i] > 0 ? dloss_p(u[i]) : dloss_m(u[i]));
-
-  double *pdu = du.data();
-  double *pg = g.data();   
-  std::vector<std::thread> threads(nthreads_);
-  for (size_t i = 0; i < nthreads_; ++i)
-    threads[i] = std::thread(&ABCFunc::grad_worker, this, i, pdu, pg);
-
-  for (auto &th : threads)
-    th.join();
-}
-
-void ABCFunc::eval(const std::vector<double> &x, double &f,
-                   std::vector<double> &g) const {
-  std::vector<double> u = compute_loss(x); 
-  std::vector<double> du(nsample_);  
-
-  f = 0.0;  
-  for (size_t i = 0; i < nsample_; ++i) {
-    f += fabs(resp_[i]) * (resp_[i] > 0 ? loss_p(u[i]) : loss_m(u[i]));
-    du[i] = (resp_[i] > 0 ? dloss_p(u[i]) : dloss_m(u[i]));
-  }  
-
-  double *pdu = du.data();
-  double *pg = g.data();   
-  std::vector<std::thread> threads(nthreads_);
-  for (size_t i = 0; i < nthreads_; ++i)
-    threads[i] = std::thread(&ABCFunc::grad_worker, this, i, pdu, pg);
-
-  for (auto &th : threads)
-    th.join();
-}
-
-void ABCFunc::loss_worker(size_t tid, const double *x, double *u) const {
-  size_t first = 0, last = 0;
-  size_t per_worker = nsample_ / nthreads_;
-  size_t remainder = nsample_ % nthreads_;
-
-  if (tid < remainder) {
-    first = (per_worker + 1) * tid;
-    last = first + per_worker + 1;
-  } else {
-    first = per_worker * tid + remainder;
-    last = first + per_worker;
-  }
-
-  for (size_t i = first; i < last; ++i) {
-    // Get the vertex of the simplex corresponding to the category of sample i.
-    const double *w = &w_[act_[i] * (k_ - 1)];
-
-    // Get row i of the kernel matrix.
-    const double *row = &kmat_[i * nsample_];
-
-    // Compute the projection of sample i.
-    std::vector<double> proj(k_ - 1, 0.0);
-    for (size_t j = 0; j < k_ - 1; ++j) {
-      size_t j1 = j * (nsample_ + 1);
-      size_t j2 = j1 + (nsample_ + 1);
-      proj[j] = std::inner_product(&x[j1 + 1], &x[j2], row, x[j1]);
-    }
-
-    // Compute the inner product between the projection and simplex vertex.
-    u[i] = std::inner_product(w, w + k_ - 1, proj.begin(), 0.0);
-  }  
-}
-
-void ABCFunc::grad_worker(size_t tid, const double *du, double *g) const {
-  size_t first = 0, last = 0;
-  size_t total = (nsample_ + 1) * (k_ - 1);
-  size_t per_worker = total / nthreads_;
-  size_t remainder = nsample_ % nthreads_;
-
-  if (tid < remainder) {
-    first = (per_worker + 1) * tid;
-    last = first + per_worker + 1;
-  } else {
-    first = per_worker * tid + remainder;
-    last = first + per_worker;
-  }
-
-  for (size_t i = first; i < last; ++i) {
-    size_t q = i / (nsample_ + 1);
-    size_t p = i % (nsample_ + 1);
-    const double *wt = &w_[q * k_]; 
-   
-    if (p == 0) {
-      // Partial derivative for x_{0q}
-      g[i] = std::inner_product(wt, wt + k_, du, 0.0); 
-    } else {
-      // Partial derivative for x_{pq}
-      g[i] = 0.0; 
-      
-      // Get row p of the kernel matrix.
-      const double *row = &kmat_[p * nsample_];
-      
-      for (size_t j = 0; j < nsample_; ++j) 
-        g[i] += du[j] * row[j] * wt[j]; 
-    }
-  }
-}
 
