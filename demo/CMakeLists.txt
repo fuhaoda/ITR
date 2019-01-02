@@ -1,5 +1,6 @@
 add_executable(demo EXCLUDE_FROM_ALL demo.cpp)
-include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(${PROJECT_SOURCE_DIR}/include
+  ${PROJECT_SOURCE_DIR}/src/include)
 target_link_libraries(demo itr)
 
 add_custom_command(

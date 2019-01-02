@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
   unsigned nthreads = 1;
   unsigned ntop = 5;
   
-  // Parse command line
+  // Parse command line.
   static struct option long_options[] =
     {
      {"data",   required_argument, 0, 'd'},
@@ -45,21 +45,21 @@ int main(int argc, char **argv) {
       return -1;
     }
   }
-  
+
   try {
-    // Register the data set
-    auto input = register_data(ifile); 
+    // Register the data set.
+    auto input = register_data(ifile);
 
-    // Create a comprehensive search instance
-    CompSearch cs(3, nthreads);
+    // Perform comprehensive search. 
+    CompSearch cs{3, nthreads};
 
-    // Preprocess the raw data
-    cs.preprocess(input); 
-    
-    // Run the analysis
-    cs.run(); 
+    // Preprocess the raw data.
+    cs.preprocess(input);
 
-    // Get the top 5 treatment recommendations.
+    // Run the analysis.
+    cs.run();
+
+    // Get the top 5 treatment recommendations. 
     auto scores = cs.score(5);
     auto var = cs.var(5);
 
@@ -71,9 +71,25 @@ int main(int argc, char **argv) {
                 << ", X" << var(i, 1) << dir[1] << cut[1]
                 << ", X" << var(i, 2) << dir[2] << cut[2] << "\n";
     }
+
+    // Perform angle based classification. 
+    AngleBasedClassifier abc{10.0, 1.0, "rbf 1", 100, 10, 1e-16, nthreads};
+
+    // Preprocess the raw data.
+    abc.preprocess(input);
+
+    // Run the analysis.
+    abc.run();
+
+    // Get the values that minimizes the objective function of the angle based
+    // classifier.
+    auto beta = abc.beta();     
+    
   } catch (const char *msg) {
     std::cout << msg << "\n";
   }
+
+  
   
   return 0;
 } 
