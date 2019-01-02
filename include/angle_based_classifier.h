@@ -14,24 +14,24 @@ class ABCFunc;
 class AngleBasedClassifier {
 public:
   // Constructor
-  // c: Positive parameter for large-margin loss functions.
-  // lambda: Weight of the penalty term.
-  // kernel: Description of the kernel function and its parameter.
+  // c: Positive real value for the large-margin loss functions.
+  // lambda: Weight of the penalty term in the objective function.
+  // kernel: String object describing the kernel function and its parameter.
   //   Valid values are:
   //   (1) "rbf xxx": RBF kernel where sigma = xxx.
-  //   (2) "poly xxx yyy": Polynomial kernel where shift = xxx, degree = yyy
-  // maxIter: Maximum number of iterations allowed for each VLBFGS invocation.
-  // m: Number of correction terms saved for VLBFGS.
-  // eps: Estimate of the machine epsilion.
+  //   (2) "poly xxx yyy": Polynomial kernel where shift = xxx, degree = yyy.
   // nthreads: Number of threads allowed to use. 
   AngleBasedClassifier(double c, double lambda, const std::string &kernel,
-                      size_t maxIter, size_t m, double eps, unsigned nthreads);
-  
+		       unsigned nthreads); 
+
   // Preprocess raw data set i.
   void preprocess(size_t i);
 
-  // Solve the nonlinear optimization problem.
-  void run();
+  // Solve the nonlinear optimization problem using VL-BFGS.
+  // maxIter: Maximum number of iterations allowed for the VL-BFGS solver. 
+  // m: Number of correction terms saved for the VL-BFGS solver.
+  // eps: Positive value controlling the accuracy of the solution. 
+  void run(size_t maxIter, size_t m, double eps);
 
   // Return the solution to the nonlinear optimization problem.
   rVector beta() const;

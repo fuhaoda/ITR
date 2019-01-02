@@ -10,27 +10,31 @@
 #include "vlbfgs.h"
 
 AngleBasedClassifier::AngleBasedClassifier(double c, double lambda,
-                                           const std::string &kernel,
-                                           size_t maxIter, size_t m,
-                                           double eps, unsigned nthreads) {
-  // Create the objective function.
-  func_ = std::make_unique<ABCFunc>(c, lambda, kernel, nthreads);
-
-  // Resize beta and initilize to zero.
-  beta_.resize(func_->dim());
-  std::fill(beta_.begin(), beta_.end(), 0.0); 
-  
-  // Create the VL-BFGS solver object.
-  vlbfgs_ = std::make_unique<VLBFGS>(func_.get(), maxIter, beta_, m,
-                                     eps, 1e-16); 
+					   const std::string &kernel,
+					   unsigned nthreads) {
+  // Create the objective function 
+  func_ = std::make_unique<ABCFunc>(c, lambda, kernel, nthreads); 
 }
 
 void AngleBasedClassifier::preprocess(size_t i) {
   // Bind the data to the objective function.
-  func_->bind(rdata[i].get()); 
+  func_->bind(rdata[i].get());
+
+  // Resize beta and initialize it to zero.
+  beta_.resize(func_->dim());
+  std::fill(beta_.begin(), beta_.end(), 0.0);
 }
 
-void AngleBasedClassifier::run() {
+void AngleBasedClassifier::run(size_t maxIter, size_t m, double eps) {
+  if (vlbfgs_ == nullptr) {
+    // Create the solver object if it does not exist. 
+    vlbfgs_ = std::make_unique<VLBFGS>(func_.get(), maxIter, beta_, m,
+				       eps, 1e-16);
+  } else {
+    // Update the solver object.
+    vlbfgs_.reset(new VLBFGS{func_.get(), maxIter, beta_, m, eps, 1e-16});
+  }
+
   // Solve the nonlinear optimization problem.
   vlbfgs_->solve();
 
