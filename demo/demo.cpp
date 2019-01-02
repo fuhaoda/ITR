@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     }
 
     // Perform angle based classification.
-    AngleBasedClassifier abc{10.0, 1.0, "rbf 1", nthreads}; 
+    AngleBasedClassifier abc{10.0, 1.0, "rbf 1e3", nthreads}; 
 
     // Preprocess the raw data.
     abc.preprocess(input);
