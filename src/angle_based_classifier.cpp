@@ -195,8 +195,8 @@ void ABCFunc::set_simplex_vertices() {
   double c2 = - (1 + sqrt(k_)) * pow(c1, 3);
   double c3 = sqrt(k_) * c1;
 
-  std::fill(w_.begin(), w_.begin() + k_, c1);
-  std::fill(w_.begin() + k_, w_.end(), c2);
+  std::fill(w_.begin(), w_.begin() + k_ - 1, c1);
+  std::fill(w_.begin() + k_ - 1, w_.end(), c2);
   for (size_t j = 1; j < k_; ++j) {
     // Update jth row, (j-1)th column
     w_[j * k_ - 1] += c3;
