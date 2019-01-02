@@ -1,7 +1,2 @@
-#install(FILES ITR.h Data.h SearchEngine.h Types.h DESTINATION include/itr)
-#install(FILES ITR.h data.h types.h comp_search.h DESTINATION include/itr)
-#set(header_files "ITR.h" "data.h" "types.h")
-#list(APPEND header_files "comp_search.h")
-#list(APPEND header_files "angle_based_classifier.h")
 FILE(GLOB header_files *.h)
 install(FILES ${header_files} DESTINATION include/itr)
