@@ -463,7 +463,7 @@ void ABCFunc::worker(size_t tid, const double *x, double *loss, double *J,
     first = per_worker * tid;
     last = first + per_worker;
   } else {
-    first = (per_woerk + 1) * tid - remainder + 1;
+    first = (per_worker + 1) * tid - remainder + 1;
     last = first + per_worker;
   }
 
