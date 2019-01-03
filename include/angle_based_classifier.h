@@ -67,9 +67,12 @@ public:
             std::vector<double> &g) const override; 
 
   // Return the dimension of the function
-  size_t dim() const override { return (1 + nsample_) * (k_ - 1); } 
+  size_t dim() const override { return dim_; } 
 
 private:
+  // Dimension of the problem
+  size_t dim_; 
+  
   // Large-margin classifier parameter.
   // See doi:10.1198/jasa.2011.tm10319
   double c_; 
@@ -156,15 +159,23 @@ private:
   // Full kernel matrix, stored in row major.
   std::vector<double> kmat_;
 
-  // Compute the value of each loss function and its derivative.
-  void compute_loss(const std::vector<double> &x,
-                    double *loss, double *dloss) const; 
-  
-  // Worker function to compute the input to each loss function.
-  void loss_worker(size_t tid, const double *x, double *u, double *du) const;
+  // Compute the function value/derivative.
+  void compute(const std::vector<double> &x, double *loss, double *J,
+               double *dJ) const;
 
-  // Compute the gradient of the function.
-  void grad_worker(size_t tid, const double *du, double *g) const;
+  // Worker function to compute the function value/derivative.
+  void worker(size_t tid, const double *x, double *loss, double *J,
+              double *dJ) const; 
+  
+  // // Compute the value of each loss function and its derivative.
+  // void compute_loss(const std::vector<double> &x,
+  //                   double *loss, double *dloss) const; 
+  
+  // // Worker function to compute the input to each loss function.
+  // void loss_worker(size_t tid, const double *x, double *u, double *du) const;
+
+  // // Compute the gradient of the function.
+  // void grad_worker(size_t tid, const double *du, double *g) const;
     
   // Loss function when the response is positive.
   double loss_p(double x) const;

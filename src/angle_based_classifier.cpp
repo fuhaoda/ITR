@@ -6,6 +6,7 @@
 #include <numeric>
 #include <cmath>
 #include <future>
+#include <functional>
 #include "angle_based_classifier.h"
 #include "vlbfgs.h"
 
@@ -92,48 +93,73 @@ void ABCFunc::bind(const Data *data) {
 
   // Compute kernel matrix
   compute_kernel_matrix(data);
+
+  // Set problem dimension
+  dim_ = (1 + nsample_) * (k_ - 1); 
 }
 
 void ABCFunc::eval(const std::vector<double> &x, double &f) const {
   std::vector<double> loss(nsample_);
-  compute_loss(x, loss.data(), nullptr);
+  std::vector<double> J(nthreads_);
+
+  compute(x, loss.data(), J.data(), nullptr);
 
   f = 0.0;
+  // Accumulate the loss terms.
   for (size_t i = 0; i < nsample_; ++i)
-    f += fabs(resp_[i]) * loss[i]; 
+    f += fabs(resp_[i]) * loss[i];
+
+  f /= nsample_;
+
+  // Add the penalty term.
+  for (size_t i = 0; i < nthreads_; ++i)
+    f += J[i]; 
 }
 
 void ABCFunc::eval(const std::vector<double> &x, std::vector<double> &g) const {
-  std::vector<double> dloss(nsample_);
-  double *pd = dloss.data();
-  double *pg = g.data(); 
+  std::vector<double> dJ(dim_ * nthreads_);
 
-  compute_loss(x, nullptr, pd);
-  std::vector<std::thread> threads(nthreads_);
-  for (size_t i = 0; i < nthreads_; ++i)
-    threads[i] = std::thread(&ABCFunc::grad_worker, this, i, pd, pg);
+  compute(x, nullptr, nullptr, dJ.data());
 
-  for (auto &th : threads)
-    th.join(); 
+  // Copy the results from thread 0
+  std::copy(dJ.begin(), dJ.begin() + dim_, g.begin());
+
+  // Accumulate the results from the remaining threads.
+  for (size_t j = 1; j < nthreads_; ++j) {
+    size_t j1 = j * dim_;
+    size_t j2 = j1 + dim_;
+    std::transform(&dJ[j1], &dJ[j2], &g[0], &g[0], std::plus<double>());
+  }
 }
 
 void ABCFunc::eval(const std::vector<double> &x, double &f,
                    std::vector<double> &g) const {
-  std::vector<double> loss(nsample_), dloss(nsample_);
-  compute_loss(x, loss.data(), dloss.data());
+  std::vector<double> loss(nsample_);
+  std::vector<double> J(nthreads_);
+  std::vector<double> dJ(dim_ * nthreads_);
 
-  f = 0.0;
+  compute(x, loss.data(), J.data(), dJ.data());
+
+  f = 0.0; 
+  // Accumulate the loss terms.
   for (size_t i = 0; i < nsample_; ++i)
     f += fabs(resp_[i]) * loss[i];
 
-  double *pd = dloss.data();
-  double *pg = g.data();
-  std::vector<std::thread> threads(nthreads_);
-  for (size_t i = 0; i < nthreads_; ++i)
-    threads[i] = std::thread(&ABCFunc::grad_worker, this, i, pd, pg);
+  f /= nsample_;
 
-  for (auto &th : threads)
-    th.join(); 
+  // Add the penalty term.
+  for (size_t i = 0; i < nthreads_; ++i)
+    f += J[i]; 
+
+  // Copy the results from thread 0
+  std::copy(dJ.begin(), dJ.begin() + dim_, g.begin());
+
+  // Accumulate the results from the remaining threads.
+  for (size_t j = 1; j < nthreads_; ++j) {
+    size_t j1 = j * dim_;
+    size_t j2 = j1 + dim_;
+    std::transform(&dJ[j1], &dJ[j2], &g[0], &g[0], std::plus<double>());
+  }
 }
 
 double ABCFunc::rbf(const double *d, size_t i, size_t j) const {
@@ -306,23 +332,31 @@ void ABCFunc::kernel_worker(const double *d, size_t tid) {
   }
 }
 
-void ABCFunc::compute_loss(const std::vector<double> &x,
-                           double *loss, double *dloss) const {
+
+void ABCFunc::compute(const std::vector<double> &x,
+                      double *loss, double *J, double *dJ) const {
   std::vector<std::thread> threads(nthreads_);
-  const double *px = x.data(); 
-  
+  const double *px = x.data();
+
   for (size_t i = 0; i < nthreads_; ++i)
-    threads[i] = std::thread(&ABCFunc::loss_worker, this, i, px, loss, dloss); 
+    threads[i] = std::thread(&ABCFunc::worker, this, i, px, loss, J, dJ);
 
   for (auto &th : threads)
     th.join(); 
 }
 
-void ABCFunc::loss_worker(size_t tid, const double *x,
-                          double *loss, double *dloss) const {
+
+void ABCFunc::worker(size_t tid, const double *x, double *loss, double *J,
+                     double *dJ) const {
+  // There are up to two rounds of work distribution in this function.
+  // The first round is to distribute the computation of u_i, the argument to
+  // the loss function.
+  // If derivative needs to be computed, the second round distributes the
+  // computation of the derivative of the penalty term. 
   size_t first = 0, last = 0;
-  size_t per_worker = nsample_ / nthreads_;
-  size_t remainder = nsample_ % nthreads_;
+  size_t total = nsample_;
+  size_t per_worker = total / nthreads_;
+  size_t remainder = total % nthreads_;
 
   if (tid < remainder) {
     first = (per_worker + 1) * tid;
@@ -332,8 +366,18 @@ void ABCFunc::loss_worker(size_t tid, const double *x,
     last = first + per_worker;
   }
 
-  std::vector<double> u(last - first, 0.0); 
-  
+
+  // Compute the arguments to the loss function.
+  std::vector<double> u(last - first, 0.0);
+
+  // Variable to accumulate penalty contribution.
+  // Note: if the function simply needs the value of the derivative, the work on
+  // this variable is unnecessary. However, without doing so, one needs to
+  // increase the memory footprint to store the projection of each sample. When
+  // computation is cheaper than memory access, this is a tradeoff the
+  // implementation makes.
+  double contrib = 0.0;
+
   for (size_t i = first; i < last; ++i) {
     // Get the vertex of the simplex corresponding to the category of sample i.
     const double *w = &w_[act_[i] * (k_ - 1)];
@@ -345,63 +389,100 @@ void ABCFunc::loss_worker(size_t tid, const double *x,
     std::vector<double> proj(k_ - 1, 0.0);
     for (size_t j = 0; j < k_ - 1; ++j) {
       size_t j1 = j * (nsample_ + 1);
-      size_t j2 = j1 + (nsample_ + 1);
-      proj[j] = std::inner_product(&x[j1 + 1], &x[j2], row, x[j1]);
+      size_t j2 = j1 + nsample_ + 1;
+      proj[j] = std::inner_product(&x[j1 + 1], &x[j2], row, 0.0);
+
+      // Accumulate the contribution from the penalty term.
+      contrib += proj[j] * x[j1 + 1 + i];
+
+      proj[j] += x[j1];
     }
 
-    // Compute the inner product between the projection and simplex vertex.
+    // Compute the inner product between the projection and the simplex vertex.
     u[i - first] = std::inner_product(w, w + k_ - 1, proj.begin(), 0.0);
   }
 
-  // Compute the loss function if loss is not nullptr.
-  if (loss) {
-    for (size_t i = first; i < last; ++i) {
-      double v = u[i - first];
+
+  // If loss is not nullptr, compute the function value.
+  if (loss && J) {
+    J[tid] = contrib;
+
+    for (size_t i = 0; i < last; ++i) {
+      double v = u[i - first]; 
       loss[i] = (resp_[i] > 0 ? loss_p(v) : loss_m(v));
     }
   }
-  
-  // Compute the derivative of the loss function if dloss is not nullptr.
-  if (dloss) {
-    for (size_t i = first; i < last; ++i) {
-      double v = u[i - first]; 
-      dloss[i] = (resp_[i] > 0 ? dloss_p(v) : dloss_m(v));
+
+  if (dJ == nullptr)
+    return;
+
+  // Compute the derivative of the function.
+
+  // First compute the derivative of the loss function. The results are
+  // overwritten into u.
+  for (size_t i = 0; i < last - first; ++i) {
+    double v = u[i];
+    u[i] = (resp_[i + first] > 0 ? dloss_p(v) : dloss_m(v));
+  }
+
+  // Compute the contribution to the derivatives from the assigned samples. 
+  size_t iter = tid * dim_; 
+  for (size_t q = 0; q < k_ - 1; ++q) {
+    const double *wt = &wt_[q * k_];
+
+    // Partial derivative for x_{0q}
+    double temp = 0.0;
+    for (size_t i = first; i < last; ++i)
+      temp += fabs(resp_[i]) * u[i - first] * wt[i];
+
+    dJ[iter++] = temp / nsample_;
+
+    // Partial derivatives for x_{pq}
+    for (size_t p = 1; p <= nsample_; ++p) {
+      const double *row = &kmat_[p * nsample_];
+
+      temp = 0.0;
+      for (size_t i = first; i < last; ++i)
+        temp += fabs(resp_[i]) * u[i - first] * wt[i] * row[i];
+
+      dJ[iter++] = temp / nsample_;
     }
   }
-}
 
-void ABCFunc::grad_worker(size_t tid, const double *du, double *g) const {
-  size_t first = 0, last = 0;
-  size_t total = (nsample_ + 1) * (k_ - 1);
-  size_t per_worker = total / nthreads_;
-  size_t remainder = nsample_ % nthreads_;
+  // Compute the contribution to the derivatives from the penalty term.
 
-  if (tid < remainder) {
-    first = (per_worker + 1) * tid;
-    last = first + per_worker + 1;
+  // Redistribute work.
+  total = nsample_ * (k_ - 1);
+  per_worker = total / nthreads_;
+  remainder = total % nthreads_;
+
+  // In the first round, the extra work is distributed to threads with smaller
+  // tids. To balance the work, the extra work here is distributed to threads
+  // with larger tids. 
+  if (tid < nthreads_ - remainder) {
+    first = per_worker * tid;
+    last = first + per_worker;
   } else {
-    first = per_worker * tid + remainder;
+    first = (per_woerk + 1) * tid - remainder + 1;
     last = first + per_worker;
   }
 
+  iter = tid * dim_; 
   for (size_t i = first; i < last; ++i) {
-    size_t q = i / (nsample_ + 1);
-    size_t p = i % (nsample_ + 1);
-    const double *wt = &w_[q * k_]; 
-   
-    if (p == 0) {
-      // Partial derivative for x_{0q}
-      g[i] = std::inner_product(wt, wt + k_, du, 0.0); 
-    } else {
-      // Partial derivative for x_{pq}
-      g[i] = 0.0; 
-      
-      // Get row p of the kernel matrix.
-      const double *row = &kmat_[p * nsample_];
-      
-      for (size_t j = 0; j < nsample_; ++j) 
-        g[i] += du[j] * row[j] * wt[j]; 
-    }
+    // Compute which partial derivative is being computed. 
+    size_t q = i / nsample_;
+    size_t p = i % nsample_;
+
+    // Get row p of the kernel matrix
+    const double *row = &kmat_[p * nsample_];
+
+    // Get x_{1q} 
+    size_t j = q * (nsample_ + 1) + 1;
+
+    double temp = std::inner_product(row, row + nsample_, &x[j], 0.0);
+
+    // Save the result. 
+    dJ[iter + j + p] += 2.0 * temp * lambda_;
   }
 }
 
@@ -445,7 +526,147 @@ double ABCFunc::dloss_m(double x) const {
   return retval; 
 }
 
+  // std::vector<double> loss(nsample_);
+  // compute_loss(x, loss.data(), nullptr);
+
+  // f = 0.0;
+  // for (size_t i = 0; i < nsample_; ++i)
+  //   f += fabs(resp_[i]) * loss[i];
+
+  // TODO: add penalty term
+
+  // std::vector<double> dloss(nsample_);
+  // double *pd = dloss.data();
+  // double *pg = g.data(); 
+
+  // compute_loss(x, nullptr, pd);
+  // std::vector<std::thread> threads(nthreads_);
+  // for (size_t i = 0; i < nthreads_; ++i)
+  //   threads[i] = std::thread(&ABCFunc::grad_worker, this, i, pd, pg);
+
+  // for (auto &th : threads)
+  //   th.join(); 
 
 
 
 
+  
+  
+  // std::vector<double> loss(nsample_), dloss(nsample_);
+  // compute_loss(x, loss.data(), dloss.data());
+
+  // f = 0.0;
+  // for (size_t i = 0; i < nsample_; ++i)
+  //   f += fabs(resp_[i]) * loss[i];
+
+  // // TODO: add penalty term
+  
+  // double *pd = dloss.data();
+  // double *pg = g.data();
+  // std::vector<std::thread> threads(nthreads_);
+  // for (size_t i = 0; i < nthreads_; ++i)
+  //   threads[i] = std::thread(&ABCFunc::grad_worker, this, i, pd, pg);
+
+  // for (auto &th : threads)
+  //   th.join(); 
+
+
+
+// void ABCFunc::compute_loss(const std::vector<double> &x,
+//                            double *loss, double *dloss) const {
+//   std::vector<std::thread> threads(nthreads_);
+//   const double *px = x.data(); 
+  
+//   for (size_t i = 0; i < nthreads_; ++i)
+//     threads[i] = std::thread(&ABCFunc::loss_worker, this, i, px, loss, dloss); 
+
+//   for (auto &th : threads)
+//     th.join(); 
+// }
+
+// void ABCFunc::loss_worker(size_t tid, const double *x,
+//                           double *loss, double *dloss) const {
+//   size_t first = 0, last = 0;
+//   size_t per_worker = nsample_ / nthreads_;
+//   size_t remainder = nsample_ % nthreads_;
+
+//   if (tid < remainder) {
+//     first = (per_worker + 1) * tid;
+//     last = first + per_worker + 1;
+//   } else {
+//     first = per_worker * tid + remainder;
+//     last = first + per_worker;
+//   }
+
+//   std::vector<double> u(last - first, 0.0); 
+  
+//   for (size_t i = first; i < last; ++i) {
+//     // Get the vertex of the simplex corresponding to the category of sample i.
+//     const double *w = &w_[act_[i] * (k_ - 1)];
+
+//     // Get row i of the kernel matrix.
+//     const double *row = &kmat_[i * nsample_];
+
+//     // Compute the projection of sample i.
+//     std::vector<double> proj(k_ - 1, 0.0);
+//     for (size_t j = 0; j < k_ - 1; ++j) {
+//       size_t j1 = j * (nsample_ + 1);
+//       size_t j2 = j1 + (nsample_ + 1);
+//       proj[j] = std::inner_product(&x[j1 + 1], &x[j2], row, x[j1]);
+//     }
+
+//     // Compute the inner product between the projection and simplex vertex.
+//     u[i - first] = std::inner_product(w, w + k_ - 1, proj.begin(), 0.0);
+//   }
+
+//   // Compute the loss function if loss is not nullptr.
+//   if (loss) {
+//     for (size_t i = first; i < last; ++i) {
+//       double v = u[i - first];
+//       loss[i] = (resp_[i] > 0 ? loss_p(v) : loss_m(v));
+//     }
+//   }
+  
+//   // Compute the derivative of the loss function if dloss is not nullptr.
+//   if (dloss) {
+//     for (size_t i = first; i < last; ++i) {
+//       double v = u[i - first]; 
+//       dloss[i] = (resp_[i] > 0 ? dloss_p(v) : dloss_m(v));
+//     }
+//   }
+// }
+
+// void ABCFunc::grad_worker(size_t tid, const double *du, double *g) const {
+//   size_t first = 0, last = 0;
+//   size_t total = (nsample_ + 1) * (k_ - 1);
+//   size_t per_worker = total / nthreads_;
+//   size_t remainder = nsample_ % nthreads_;
+
+//   if (tid < remainder) {
+//     first = (per_worker + 1) * tid;
+//     last = first + per_worker + 1;
+//   } else {
+//     first = per_worker * tid + remainder;
+//     last = first + per_worker;
+//   }
+
+//   for (size_t i = first; i < last; ++i) {
+//     size_t q = i / (nsample_ + 1);
+//     size_t p = i % (nsample_ + 1);
+//     const double *wt = &w_[q * k_]; 
+   
+//     if (p == 0) {
+//       // Partial derivative for x_{0q}
+//       g[i] = std::inner_product(wt, wt + k_, du, 0.0); 
+//     } else {
+//       // Partial derivative for x_{pq}
+//       g[i] = 0.0; 
+      
+//       // Get row p of the kernel matrix.
+//       const double *row = &kmat_[p * nsample_];
+      
+//       for (size_t j = 0; j < nsample_; ++j) 
+//         g[i] += du[j] * row[j] * wt[j]; 
+//     }
+//   }
+// }
