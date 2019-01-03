@@ -433,17 +433,17 @@ void ABCFunc::worker(size_t tid, const double *x, double *loss, double *J,
     // Partial derivative for x_{0q}
     double temp = 0.0;
     for (size_t i = first; i < last; ++i)
-      temp += fabs(resp_[i]) * u[i - first] * wt[i];
+      temp += fabs(resp_[i]) * u[i - first] * wt[act_[i]];
 
     dJ[iter++] = temp / nsample_;
 
     // Partial derivatives for x_{pq}
-    for (size_t p = 1; p <= nsample_; ++p) {
+    for (size_t p = 0; p < nsample_; ++p) {
       const double *row = &kmat_[p * nsample_];
 
       temp = 0.0;
       for (size_t i = first; i < last; ++i)
-        temp += fabs(resp_[i]) * u[i - first] * wt[i] * row[i];
+        temp += fabs(resp_[i]) * u[i - first] * wt[act_[i]] * row[i];
 
       dJ[iter++] = temp / nsample_;
     }
