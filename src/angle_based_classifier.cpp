@@ -24,6 +24,19 @@ void AngleBasedClassifier::preprocess(size_t i) {
   // Resize beta and initialize it to zero.
   beta_.resize(func_->dim());
   std::fill(beta_.begin(), beta_.end(), 0.0);
+
+#if 1
+  beta_[0] = 1;
+  beta_[1] = 2;
+  beta_[2] = 3;
+  beta_[3] = 4;
+  beta_[4] = 5;
+  beta_[5] = 6;
+  beta_[6] = 7;
+  beta_[7] = 8;
+  beta_[8] = 9;
+  beta_[9] = 10;
+#endif
 }
 
 void AngleBasedClassifier::run(size_t maxIter, size_t m, double eps) {
@@ -507,7 +520,7 @@ double ABCFunc::dloss_p(double x) const {
   static double c2 = 1 - c_;
   double retval = -1;
   if (x >= thres_) {
-    retval = pow(c1 * x + c2, -2);
+    retval = -pow(c1 * x + c2, -2);
   }
   return retval;
 }
