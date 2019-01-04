@@ -1,6 +1,7 @@
 #include <cmath>
 #include <algorithm>
 #include <numeric>
+#include <cassert> 
 #include <functional>
 #include "vlbfgs.h"
 
@@ -57,7 +58,7 @@ bool VLBFGS::iterate() {
 		      1.0 / sqrt(std::inner_product(s, s + n_, s, 0.0))); 
 
   // Line search. Variables x_, f_, and g_ will be updated to the new location
-  mt_->search(x_, f_, g_, s, step_size); 
+  assert(mt_->search(x_, f_, g_, s, step_size) == 0); 
 
   // Save the latest correction term. Update s variable by multiplying the
   // search direction with the step size returned from the line search. Compute
