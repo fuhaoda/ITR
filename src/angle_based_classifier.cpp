@@ -24,19 +24,6 @@ void AngleBasedClassifier::preprocess(size_t i) {
   // Resize beta and initialize it to zero.
   beta_.resize(func_->dim());
   std::fill(beta_.begin(), beta_.end(), 0.0);
-
-#if 1
-  beta_[0] = 1;
-  beta_[1] = 2;
-  beta_[2] = 3;
-  beta_[3] = 4;
-  beta_[4] = 5;
-  beta_[5] = 6;
-  beta_[6] = 7;
-  beta_[7] = 8;
-  beta_[8] = 9;
-  beta_[9] = 10;
-#endif
 }
 
 void AngleBasedClassifier::run(size_t maxIter, size_t m, double eps) {
@@ -473,7 +460,7 @@ void ABCFunc::worker(size_t tid, const double *x, double *loss, double *J,
     last = first + per_worker;
   } else {
     first = (per_worker + 1) * tid - remainder + 1;
-    last = first + per_worker;
+    last = first + per_worker + 1;
   }
 
   iter = tid * dim_; 
