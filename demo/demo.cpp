@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
     abc.preprocess(input);
 
     // Run the analysis.
-    abc.run(4, 10, 1e-5); 
+    abc.run(100, 10, 1e-5); 
 
     // Get the values that minimizes the objective function of the angle based
     // classifier.
