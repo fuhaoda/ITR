@@ -10,8 +10,6 @@
 #include "angle_based_classifier.h"
 #include "vlbfgs.h"
 
-#include <iostream>
-
 AngleBasedClassifier::AngleBasedClassifier(double c, double lambda,
 					   const std::string kernel,
 					   unsigned nthreads) {

@@ -7,7 +7,6 @@
 #include "multimin.h"
 #include "linesearch.h"
 
-
 // Reference
 // https://papers.nips.cc/paper/5333-large-scale-l-bfgs-using-mapreduce.pdf
 
