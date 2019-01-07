@@ -21,7 +21,7 @@ public:
   //   (1) "rbf xxx": RBF kernel where sigma = xxx.
   //   (2) "poly xxx yyy": Polynomial kernel where shift = xxx, degree = yyy.
   // nthreads: Number of threads allowed to use. 
-  AngleBasedClassifier(double c, double lambda, const std::string &kernel,
+  AngleBasedClassifier(double c, double lambda, const std::string kernel,
 		       unsigned nthreads); 
 
   // Preprocess raw data set i.

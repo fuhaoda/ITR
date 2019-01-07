@@ -4,6 +4,10 @@
 #include <cassert> 
 #include <functional>
 #include "vlbfgs.h"
+#if 1
+#include <iostream>
+#endif
+
 
 VLBFGS::VLBFGS(FDF *func, size_t maxIter, const std::vector<double> &x0,
                size_t m, double eps, double xtol)
@@ -41,6 +45,9 @@ VLBFGS::VLBFGS(FDF *func, size_t maxIter, const std::vector<double> &x0,
 }
 
 bool VLBFGS::iterate() {
+  std::cout << x_[0] << "\n"; 
+
+  
   // Variable iter_ is the subscript of the correction term to be generated in
   // the current iteration. The search direction term will be properly scaled
   // and the new gradient difference will be computed. 

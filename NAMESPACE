@@ -1,4 +1,4 @@
 export(register_data)
-#export(load_data)
 export(CompSearch)
+export(AngleBasedClassifier)
 useDynLib(ITR)

@@ -10,8 +10,10 @@
 #include "angle_based_classifier.h"
 #include "vlbfgs.h"
 
+#include <iostream>
+
 AngleBasedClassifier::AngleBasedClassifier(double c, double lambda,
-					   const std::string &kernel,
+					   const std::string kernel,
 					   unsigned nthreads) {
   // Create the objective function 
   func_ = std::make_unique<ABCFunc>(c, lambda, kernel, nthreads); 
@@ -40,7 +42,7 @@ void AngleBasedClassifier::run(size_t maxIter, size_t m, double eps) {
   vlbfgs_->solve();
 
   // Copy the results.
-  vlbfgs_->x(beta_); 
+  vlbfgs_->x(beta_);
 }
 
 rVector AngleBasedClassifier::beta() const {

@@ -39,6 +39,14 @@ RCPP_MODULE(ITR) {
     .method("cut", &CompSearch::cut)
     .method("dir", &CompSearch::dir)
     ;
+
+
+  class_<AngleBasedClassifier>("AngleBasedClassifier")
+    .constructor<double, double, std::string, unsigned>()
+    .method("preprocess", &AngleBasedClassifier::preprocess)
+    .method("run", &AngleBasedClassifier::run)
+    .method("beta", &AngleBasedClassifier::beta)
+    ;
   
 }
 

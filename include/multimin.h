@@ -5,6 +5,10 @@
 #include <algorithm>
 #include "fdf.h"
 
+#if 1
+#include <iostream>
+#endif 
+
 // An abstract base class for minimization of a multi-dimensional function 
 class MultiMin {
 public:
