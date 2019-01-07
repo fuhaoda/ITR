@@ -79,7 +79,8 @@ int main(int argc, char **argv) {
     // Get the values that minimizes the objective function of the angle based
     // classifier.
     auto beta = abc.beta();     
-    
+
+    std::cout << beta[0] << "\n";
   } catch (const char *msg) {
     std::cout << msg << "\n";
   }
