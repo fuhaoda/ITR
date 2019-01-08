@@ -40,7 +40,7 @@ VLBFGS::VLBFGS(FDF *func, size_t maxIter, const std::vector<double> &x0,
   threads_.resize(nthreads_); 
 }
 
-bool VLBFGS::iterate() {
+int VLBFGS::iterate() {  
   // Variable iter_ is the subscript of the correction term to be generated in
   // the current iteration. The search direction term will be properly scaled
   // and the new gradient difference will be computed. 
@@ -57,8 +57,12 @@ bool VLBFGS::iterate() {
   double step_size = (iter_ ? 1.0 :
 		      1.0 / sqrt(std::inner_product(s, s + n_, s, 0.0))); 
 
-  // Line search. Variables x_, f_, and g_ will be updated to the new location
-  assert(mt_->search(x_, f_, g_, s, step_size) == 0); 
+  // Line search. Variables x_, f_, and g_ will be updated to the new location.
+  // This line used to be 
+  //   assert(mt_->search(x_, f_, g_, s, step_size) == 0) 
+  // but is skipped in Rcpp as assert does not satisfy CRAN standard. 
+  if (mt_->search(x_, f_, g_, s, step_size) != 0)
+    return -1;   
 
   // Save the latest correction term. Update s variable by multiplying the
   // search direction with the step size returned from the line search. Compute
@@ -72,7 +76,7 @@ bool VLBFGS::iterate() {
   gnorm = sqrt(gnorm);
   xnorm = std::max(1.0, sqrt(xnorm));
   if (gnorm / xnorm <= eps_)
-    return false;
+    return 0; 
 
   // More iteration is needed. Compute the new search direction
   
@@ -101,7 +105,7 @@ bool VLBFGS::iterate() {
   for (auto &thread: threads_)
     thread.join(); 
 
-  return true; 
+  return 1; 
 }
 
 void VLBFGS::updateMatrixB(size_t tid) {

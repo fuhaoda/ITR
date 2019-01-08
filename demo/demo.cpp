@@ -74,13 +74,15 @@ int main(int argc, char **argv) {
     abc.preprocess(input);
 
     // Run the analysis.
-    abc.run(100, 10, 1e-5); 
+    auto status = abc.run(100, 10, 1e-1); 
 
-    // Get the values that minimizes the objective function of the angle based
-    // classifier.
-    auto beta = abc.beta();     
+    if (!status) {
+      // Retrieve the solution if it has been found within the permitted iterations.
+      auto beta = abc.beta();
 
-    std::cout << beta[0] << "\n";
+      for (auto &v : beta)
+        std::cout << v << "\n";
+    }
   } catch (const char *msg) {
     std::cout << msg << "\n";
   }

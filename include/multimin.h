@@ -23,20 +23,32 @@ public:
 
   // Virtual destructor 
   virtual ~MultiMin() { } 
-  
-  // Routine to move the minimizer to a better location. It returns true if more
-  // iteration is needed. 
-  virtual bool iterate() = 0; 
 
-  // Solve the minimization problem. 
-  void solve() {
-    // Terminates either when a minimizer has been found or when the number of
-    // iteration exceeds the maximum allowed limit.
+  // Routine to move the minimizer to a better location. It returns 0 if the
+  // iteration can be terminated. It returns 1 if more iterations are needed. It
+  // returns -1 if error happens when trying to move to the new location.
+  virtual int iterate() = 0; 
+
+  // Solve the minimization problem. It returns 0 if the solution is found
+  // within the allowed iterations. It returns 1 if no solution is found after
+  // the maximum allowed iterations. It returns -1 if error happens during any
+  // iteration. 
+  int solve() {
     while (iter_ < maxIter_) {
-      if (!iterate())
-        break; 
-      iter_++;
+      auto status = iterate();
+
+      if (status == 0) {
+        // A solution has been found. Terminate.
+        return 0; 
+      } else if (status == -1) {
+        // A problem has occured during the iteration. Terminate.
+        return -1; 
+      }
+
+      iter_++; 
     }
+
+    return 1; 
   }
   
   // Copy the location of the minimizer into the provided buffer

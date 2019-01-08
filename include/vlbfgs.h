@@ -24,7 +24,7 @@ public:
          double eps, double xtol);
 
   // One iteration of VL-BFGS
-  bool iterate() override;
+  int iterate() override; 
 
 private:
   // Number of corrections used in the BFGS update.

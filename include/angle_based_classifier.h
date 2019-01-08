@@ -30,9 +30,14 @@ public:
   // Solve the nonlinear optimization problem using VL-BFGS.
   // maxIter: Maximum number of iterations allowed for the VL-BFGS solver. 
   // m: Number of correction terms saved for the VL-BFGS solver.
-  // eps: Positive value controlling the accuracy of the solution. 
-  void run(size_t maxIter, size_t m, double eps);
-
+  // eps: Positive value controlling the accuracy of the solution.
+  //
+  // Return values:
+  // 0: The solution is found within the alllowed iterations.
+  // 1: No solution is found after the maximum allowed iterations.
+  // -1: Error happens during any iteration. 
+  int run(size_t maxIter, size_t m, double eps); 
+  
   // Return the solution to the nonlinear optimization problem.
   rVector beta() const;
 
@@ -166,17 +171,7 @@ private:
   // Worker function to compute the function value/derivative.
   void worker(size_t tid, const double *x, double *loss, double *J,
               double *dJ) const; 
-  
-  // // Compute the value of each loss function and its derivative.
-  // void compute_loss(const std::vector<double> &x,
-  //                   double *loss, double *dloss) const; 
-  
-  // // Worker function to compute the input to each loss function.
-  // void loss_worker(size_t tid, const double *x, double *u, double *du) const;
-
-  // // Compute the gradient of the function.
-  // void grad_worker(size_t tid, const double *du, double *g) const;
-    
+      
   // Loss function when the response is positive.
   double loss_p(double x) const;
 

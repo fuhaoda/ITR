@@ -26,7 +26,7 @@ void AngleBasedClassifier::preprocess(size_t i) {
   std::fill(beta_.begin(), beta_.end(), 0.0);
 }
 
-void AngleBasedClassifier::run(size_t maxIter, size_t m, double eps) {
+int AngleBasedClassifier::run(size_t maxIter, size_t m, double eps) {
   if (vlbfgs_ == nullptr) {
     // Create the solver object if it does not exist. 
     vlbfgs_ = std::make_unique<VLBFGS>(func_.get(), maxIter, beta_, m,
@@ -37,10 +37,13 @@ void AngleBasedClassifier::run(size_t maxIter, size_t m, double eps) {
   }
 
   // Solve the nonlinear optimization problem.
-  vlbfgs_->solve();
+  int status = vlbfgs_->solve();
 
-  // Copy the results.
-  vlbfgs_->x(beta_);
+  if (!status) 
+    // Copy the results.
+    vlbfgs_->x(beta_);
+
+  return status; 
 }
 
 rVector AngleBasedClassifier::beta() const {
