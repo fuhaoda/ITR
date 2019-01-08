@@ -93,9 +93,16 @@ E^{{\cal D}_B} = \frac{1}{10}\times \frac{1}{0.5}
 Therefore, we conclude doctor Adam's treatment recommendation is better than
 doctor Barry's treatment recommendation. When there are more than two treatment
 rules, the objective is to find  ${\cal D}_o$ such that
-\[
+\begin{equation}
+  \label{eq:max}
   {\cal D}_o \in \mathop {\arg \max} \limits_{{\cal D} \in R} E^{\cal D}(Y) =
   \mathop {\arg \max} \limits_{{\cal D} \in R}
   E\left [ \frac{I_{A={\cal D}(X)}}{p(A|X)} Y \right ]
-\]
-where $R$ is the space of possible treatment recommendations. 
+\end{equation}
+where $R$ is the space of possible treatment recommendations. Alternatively, the
+problem can be equivalently expressed as
+\begin{equation}
+  \label{eq:min}
+  {\cal D}_o \in \mathop {\arg \min} \limits_{{\cal D} \in R} E
+  \left [ \frac{I_{A \neq {\cal D}(X)}}{p(A|X)} Y \right ].
+\end{equation}

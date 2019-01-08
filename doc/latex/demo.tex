@@ -1,110 +1,163 @@
-\chapter{Usage}
+\chapter{Using ITR}
 
-\section{In a C++ program} 
-
-The package comes with a demonstration program in the {\tt demo} directory
-showing how to use the {\tt ITR} library.
-
-To use the library, one needs to include the header file {\tt ITR.h}. Inside
-{\tt main()}, an {\tt ITR} instance is created by passing three arguments to
-its constructor. The first argument is a {\tt std::string} object specifying the
-path to the input csv file. The second argument is an unsigned integer specifying the search depth. The third argument is an unsigned integer specifying the number of threads used in the search. 
-
-For the csv input file, the first line must be a header. The first column is the
-subject identifier, followed by continuous variables (labeled as {\tt cont*}), ordinal
-variables (labeled as {\tt ord*}), nominal variables (labeled as {\tt nom*}),
-actions (labeled as {\tt A*}), responses (labeled as {\tt Y*}), and condition
-probablity $P(A = 1 | X)$. The ITR library is case insensitive to these labels.
-
-For the search depth, the valid values are 1, 2, and 3.   
-
-The constructor of `ITR` will throw an exception if the input file does not
-exist or the search depth is invalid. 
-
-After the instance is created, one performs the search by invoking the {\tt run}
-method. Once the search completes, one can query the top {\tt n} results using
-the following methods
+This chapter describes how to use ITR as a C++ library and a R module. There
+are three steps of using ITR:
 
 \begin{enumerate}
-\item {\tt score}: Get the score of the top $n$ searches.
-\item {\tt var}: Get the index of the variables associated with the top scores.
-\item {\tt cut}: Get the cut information of a given top score.
-\item {\tt dir}: Get the direction of the cut associated with a given top score.
+\item Register the data set to be analyzed with ITR.
+\item Create an analyzer object.
+\item Perform the analysis and query the results.
 \end{enumerate}
 
-Generally, one needs to {\tt -I/path/to/ITR-install/include/itr} and
-{\tt -L/path/to/ITR-install/lib -litr} to the compile command.  For the example,
-it can be built and executed as follows
-\begin{verbatim}
-> cd /path/to/ITR-build/demo
+\section{Register data set}
+Any data set wants to be analyzed must be registered by calling the function
+%
+\begin{lstlisting}
+size_t register_data(const std::string &input)
+\end{lstlisting}
+%
+The input specifies the path to the data set in the csv format. The function returns
+an identifier of the data set which can be passed to the analyzer object discussed
+later.
+
+There are a few requirements on the csv input file. The first line of the file must
+be a header. The first column is the subject identifier, followed by
+continuous variables (labeled as {\tt cont*}), ordinal variables (labeled
+as {\tt ord*}), nominal variables (labeled as {\tt nom*}), actions (labeled
+as {\tt A*}), responses (labeled as {\tt Y*}), and condition probability
+$P(A = a_i |X_i)$. The ITR library is case insensitive to these labels. An example of
+the data set looks the following
+
+\begin{lstlisting}[frame=]
+ID,Cont1,Cont2,Cont3,Ord1,Ord2,Ord3,Nom1,Nom2,Nom3,A,Y,P(A=1|X)
+1,20.0871,15.6859,135.029,4,2,0,4,3,3,0,31.2112,0.5
+2,284.225,5.51997,74.278,0,3,3,2,3,3,0,20.8458,0.5
+3,62.2001,75.9237,11.6757,1,3,3,4,1,3,0,94.7321,0.5
+\end{lstlisting}
+
+\section{Create analyzer object}
+There are two types of analyer objects in ITR: comprehensive search (CS) and
+angle-based classifier (ABC). The constructor for CS takes two parameter:
+\begin{lstlisting}
+CompSearch(unsigned depth, unsigned nthreads)
+\end{lstlisting}
+The first parameter specifies the depth of the search and the valid values are
+1, 2, and 3. The second parameter specifies the number of threads to use. The value
+is internally truncated up to the number of available cores in the system. If
+the value is set to 1, the computation is performed sequentially. 
+
+The constructor for ABC takes four parameters:
+\begin{lstlisting}
+AngleBasedClassifier(double c, double lambda, const std::string kernel,
+                     unsigned threads)
+\end{lstlisting}
+The first parameter is a positive real number for the large-margin loss function.
+The second parameter is the weight of the penalty term in the objective function.
+The third parameter is a string object describing the kernel function and its
+parameters. The valid values are: (1) {\tt rbf xxx} for the radial basis function
+kernel where the kernel parameter $\sigma$ is set to {\tt xxx}. (2)
+{\tt poly xxx yyy} for the polynomial kernel where {\tt xxx} is the shift and
+{\tt yyy} is the degree of the polynomial. If {\tt yyy} is set to 1, it is simply
+the linear kernel. The last parameter is the number of threads to use. 
+
+\section{Perform analysis and query results}
+To analyze any registered data set, one first calls the {\tt preprocess} function 
+\begin{lstlisting}
+void preprocess(size_t i)
+\end{lstlisting}   
+passing in the identifier of the data set returned by the {\tt registeer\_data}
+function. Afterwards, the analysis can be performed by calling the {\tt run} method
+of the analyzer object. For the CS object, the {\tt run} method takes no parameter.
+For the ABC object, the {\tt run} method takes three parameters to configure the
+underlying L-BFGS solver.
+\begin{lstlisting}
+int AngleBasedClassifier::run(size_t maxItr, size_t m, double eps)
+\end{lstlisting}
+The first parameter specifies the maximum number of iterations allowed for the
+L-BFGS solver. The second parameter specifies the number of correction terms
+saved by the L-BFGS solver. The third parameter is a positive value controlling
+the accuracy of the solution. In terms of return values, value 0 indicates that
+the solution is found within the allowed number of iterations; value 1 indicates
+that no solution is found after the maximum allowed iterations; value -1
+indicates error happens during the iteration. 
+
+Once the {\tt run} method completes, one can query the results of the analysis.
+For CS, the available choices are
+\begin{lstlisting}
+rVector CompSearch::score(size_t ntop)
+\end{lstlisting}
+This function reports the best scores. 
+\begin{lstlisting}
+uMatrix CompSearch::var(size_t ntop)
+\end{lstlisting}
+This function reports the variables associated with the best scores. 
+\begin{lstlisting}
+sVector cut(size_t i)
+\end{lstlisting}
+This function reports the cut value associated with the ith best score. 
+\begin{lstlisting}
+sVector dir(size_t i) 
+\end{lstlisting}
+This function reports the cut direction associated with the ith best score.
+
+For ABC, the available choice is
+\begin{lstlisting}
+rVector AngleBasedClassifer::beta()
+\end{lstlisting}
+This function returns the solution to the nonlinear optimization problem. 
+
+\section{C++ demo}
+
+The package comes with a demonstration program in the {\tt demo} directory.
+To build it, using the configurations in Section~\ref{sec:c}, one performs
+the following steps
+\begin{lstlisting}[language=bash, frame=]
+> cd /path/to/build/demo
 > make demo
-> ./demo
-\end{verbatim}
+\end{lstlisting}
+For other use, one needs to include the header file {\tt ITR.h} in the source
+code that uses the library, and needs to supply
+{\tt -I/path/to/install/include/itr} and {\tt -L/path/to/install/lib -litr}
+to compile the code and link against the library. The output of the {\tt demo}
+prorgam looks like the following
+\begin{lstlisting}
+Score = 68.8498, X1 < 49.8351 (percentile 50), X2 >= 49.6823 (percentile 20), X7 not in 0 2 
+Score = 67.8728, X1 < 58.8109 (percentile 60), X6 not in 2 3 , X7 not in 2 3 
+Score = 67.4449, X1 < 49.8351 (percentile 50), X7 not in 0 2 , X8 not in 2 
+Score = 67.4299, X1 < 42.1108 (percentile 40), X5 < 3 (4 out of 5), X6 not in 2 3 
+Score = 67.4087, X1 < 49.8351 (percentile 50), X6 not in 0 2 , X8 not in 2 
+0.932404
+-0.125072
+-0.0889801
+0.102649
+-0.00148621
+0.00923544
+0.0340478
+-0.145428
+...
+\end{lstlisting}
 
-There are a few options to the {\tt demo} program, which can be found by
-\begin{verbatim}
-> ./demo --help
-Usage: ./demo [OPTIONS]
---data=STRING Path to input file, default is sample100.csv
---thread=NUM  Number of threads to use, default is 1
---best=NUM    Number of top results to display, default is 5
-\end{verbatim} 
+\section{R demo}
 
-A sample output of the {\tt demo} program looks like
-\begin{verbatim}
-> ./demo --thread=8
-Loading input data ...
-Creating search engine with depth 3
-Searching 689048 choices ...
-Completed in 6.264286e-03 seconds using 8 threads
-Score = 6.884978e+01, X1 < 49.8351 (percentile 50), X2 >= 49.6823 (percentile 20), X7 not in 0 2 
-Score = 6.787278e+01, X1 < 58.8109 (percentile 60), X6 not in 2 3 , X7 not in 2 3 
-Score = 6.744488e+01, X1 < 49.8351 (percentile 50), X7 not in 0 2 , X8 not in 2 
-Score = 6.742991e+01, X1 < 42.1108 (percentile 40), X5 < 3 (4 out of 5), X6 not in 2 3 
-Score = 6.740870e+01, X1 < 49.8351 (percentile 50), X6 not in 0 2 , X8 not in 2 
-\end{verbatim} 
+Here is an R session demonstrating the usage of the package.
 
-
-\section{In R}
-
-First load the library
-\begin{verbatim} 
+\begin{lstlisting}[language=R, showstringspaces=false]
 > library('ITR')
-\end{verbatim}
-
-Create an ITR instance by pasing the path to the input data file, the depth of the search, and the number of threads to run the search to the constructor
-\begin{verbatim}
-> itr <- new(ITR,'sample100.csv', 3, 8)
-Loading input data ...
-Creating search engine with depth 3
-\end{verbatim}
-
-Run the search
-\begin{verbatim}
-> itr$run()
-Searching 689048 choices ...
-Completed in 1.370409e-02 seconds using 8 threads
-\end{verbatim}
-
-Get the scores of the best 5 searches
-\begin{verbatim}
-> itr$score(5)
+Loading required package: Rcpp
+> data_id <- register_data('sample100.csv')
+> cs <- new(CompSearch, 3, 8)
+> cs$preprocess(data_id)
+> cs$run()
+> cs$score(5)
 [1] 68.84978 67.87278 67.44488 67.42991 67.40870
-\end{verbatim}
-
-Get the variables associated with the best 5 searches
-\begin{verbatim}
-> itr$var(5)
+> cs$var(5)
      [,1] [,2] [,3]
 [1,]    1    2    7
 [2,]    1    6    7
 [3,]    1    7    8
 [4,]    1    5    6
 [5,]    1    6    8
-\end{verbatim} 
-Get the cut information of a particular search, say, the second best one,
-\begin{verbatim}
-> itr$cut(2)
+> cs$cut(2)
 [[1]]
 [1] "58.8109 (percentile 60)"
 
@@ -113,10 +166,8 @@ Get the cut information of a particular search, say, the second best one,
 
 [[3]]
 [1] "2 3 "
-\end{verbatim}
-Get the direction of the cut associated with a particular search, say, the second best one
-\begin{verbatim}
-> itr$dir(2)
+
+> cs$dir(2)
 [[1]]
 [1] " < "
 
@@ -125,4 +176,30 @@ Get the direction of the cut associated with a particular search, say, the secon
 
 [[3]]
 [1] " not in "
-\end{verbatim}
+> abc <- new(AngleBasedClassifier, 10.0, 1.0, "rbf 1e3", 1)
+> abc$preprocess(data_id)
+> abc$run(100, 10, 1e-1)
+> abc$beta()
+  [1]  9.368988e-01 -1.282671e-01 -1.012102e-01  9.934106e-02 -1.130552e-02
+  [6]  5.073681e-03  2.694525e-02 -1.426019e-01  9.910970e-02 -1.102812e-01
+ [11]  8.493024e-03  8.918804e-03 -2.457499e-02 -6.818580e-02 -1.817148e-02
+ [16]  6.353913e-02  8.686820e-02  1.021895e-01  8.709502e-02 -2.069887e-02
+ [21]  6.153464e-02 -6.866418e-02 -7.470917e-02  3.794699e-02  2.184204e-02
+ [26]  8.245382e-02 -8.168155e-02 -1.002616e-02  3.766475e-02  5.580140e-02
+ [31]  5.418532e-02 -9.802538e-02  1.065100e-01  1.443494e-01 -1.361683e-01
+ [36]  1.331555e-01 -1.286964e-01  1.298254e-01  2.617285e-02 -3.220321e-02
+ [41] -1.019195e-01 -9.550773e-02 -5.108990e-02 -1.372925e-01  4.591341e-02
+ [46] -1.437009e-01 -3.149146e-02  7.162312e-02 -1.464040e-01  6.264910e-02
+ [51] -9.430271e-02 -1.139210e-01  8.449190e-02 -1.335786e-01  6.590237e-02
+ [56]  8.748744e-02 -6.655964e-02 -2.470679e-02  7.374848e-02  6.311262e-02
+ [61]  4.016364e-02  6.806053e-02 -8.459916e-02 -1.378274e-02  1.249061e-02
+ [66]  9.976777e-03 -3.141552e-02  1.155593e-01 -2.821169e-02  1.761921e-02
+ [71] -1.388808e-02  1.677525e-01  8.383804e-02 -9.458604e-02  1.243435e-02
+ [76]  7.769387e-02 -1.573087e-01 -8.478658e-02  7.738239e-02 -2.592789e-02
+ [81] -5.793699e-02 -7.709801e-02  2.415769e-06 -4.766364e-02 -9.346931e-02
+ [86] -1.048874e-01  1.023146e-01 -1.096255e-01  1.240425e-01  2.887337e-02
+ [91]  1.165838e-01 -7.381607e-02  3.223406e-02 -6.719682e-02  1.093244e-01
+ [96]  1.235799e-01 -1.006323e-02  1.145411e-01 -9.606964e-03  5.631287e-02
+[101]  5.073803e-02
+> 
+\end{lstlisting}

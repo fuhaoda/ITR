@@ -1,5 +1,4 @@
-\documentclass[12pt, landscape]{book}
-\usepackage{amsmath}
+\documentclass[11pt]{book}
 \usepackage[margin=1in]{geometry}
 \usepackage{xcolor}
 \usepackage{hyperref}
@@ -21,9 +20,10 @@ frame=single,
 }
 \urlstyle{same}
 \usepackage{tikz}
+\usepackage{amsmath}
 
-\newcommand{\version}{0.5.0~}
-\setcounter{chapter}{1}
+\newcommand{\version}{0.6.0~}
+%\setcounter{chapter}{1}
 
 \title{
   \Huge
@@ -40,15 +40,18 @@ frame=single,
 
 \frontmatter
 \maketitle
+
 \tableofcontents
 
-\input{intro.tex}
+\mainmatter
 
-\input{search.tex}
+\input{intro.tex}
 
 \input{install.tex}
 
 \input{demo.tex}
+
+\input{search.tex}
 
 \end{document}
 
