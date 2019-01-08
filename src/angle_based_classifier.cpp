@@ -406,7 +406,7 @@ void ABCFunc::worker(size_t tid, const double *x, double *loss, double *J,
   if (loss && J) {
     J[tid] = contrib;
 
-    for (size_t i = 0; i < last; ++i) {
+    for (size_t i = first; i < last; ++i) {
       double v = u[i - first]; 
       loss[i] = (resp_[i] > 0 ? loss_p(v) : loss_m(v));
     }
